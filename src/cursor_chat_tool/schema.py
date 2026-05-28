@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import json
-import sqlite3
+from typing import Any, Protocol
 
 from cursor_chat_tool.model import SchemaReport
 
@@ -16,7 +16,11 @@ EXPECTED_WS_IDENTIFIER_REQUIRED = {"id"}
 EXPECTED_KV_PREFIXES = {"composerData:", "bubbleId:"}
 
 
-def detect_mismatch(con: sqlite3.Connection) -> SchemaReport:
+class _Queryable(Protocol):
+    def execute(self, sql: str, *parameters: Any) -> Any: ...
+
+
+def detect_mismatch(con: _Queryable) -> SchemaReport:
     missing: list[str] = []
     unexpected: list[str] = []
     samples: dict[str, object] = {}
