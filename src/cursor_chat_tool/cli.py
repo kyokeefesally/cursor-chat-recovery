@@ -5,9 +5,15 @@ import argparse
 import json
 import sys
 from collections.abc import Callable
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from cursor_chat_tool import operations, paths, schema, storage
+
+try:
+    __version__ = version("cursor-chat-tool")
+except PackageNotFoundError:  # running from source without install
+    __version__ = "0.0.0+dev"
 
 
 def _resolve_paths(args: argparse.Namespace) -> tuple[Path, Path, Path | None]:
@@ -118,7 +124,7 @@ def _do_tui(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="cursor-chat-tool")
-    p.add_argument("--version", action="version", version="0.1.0")
+    p.add_argument("--version", action="version", version=__version__)
     p.add_argument("--global-db")
     p.add_argument("--workspace-storage")
     p.add_argument("--backup-dir")
