@@ -12,6 +12,7 @@ from cursor_chat_tool.model import (
     Bubble,
     ChatDetail,
     ChatHeader,
+    MergeResult,
     ReassignResult,
     Workspace,
     WorkspaceIdentifier,
@@ -267,4 +268,32 @@ def reassign_chats(
         composer_ids=composer_ids,
         from_workspace_ids=sorted(set(from_ids)),
         to_workspace_id=target_ws_id,
+    )
+
+
+def merge_workspaces(
+    storage_: Storage,
+    source_ws_id: str,
+    target_ws_id: str,
+) -> MergeResult:
+    if source_ws_id == target_ws_id:
+        raise ValueError("source and target workspace ids must differ")
+    headers_data = storage_.read_headers()
+    composer_ids = [
+        h["composerId"] for h in headers_data.get("allComposers", [])
+        if (h.get("workspaceIdentifier") or {}).get("id") == source_ws_id
+    ]
+    if not composer_ids:
+        return MergeResult(
+            backup_path="",
+            source_workspace_id=source_ws_id,
+            target_workspace_id=target_ws_id,
+            chats_moved=0,
+        )
+    res = reassign_chats(storage_, composer_ids, target_ws_id)
+    return MergeResult(
+        backup_path=res.backup_path,
+        source_workspace_id=source_ws_id,
+        target_workspace_id=target_ws_id,
+        chats_moved=len(composer_ids),
     )

@@ -107,3 +107,32 @@ def test_reassign_roundtrip_identity(minimal_db, tmp_path):
     restored = s2.read_headers()
     s2.close()
     assert restored == original
+
+
+def test_merge_workspaces_moves_all_chats(minimal_db, tmp_path):
+    import shutil
+
+    from cursor_chat_tool import operations, storage
+
+    work = tmp_path / "state.vscdb"
+    shutil.copy(minimal_db, work)
+    backup_dir = tmp_path / "backups"
+    s = storage.Storage.open_rw(work, backup_dir=backup_dir, cursor_running_check=lambda: False)
+    s.ensure_session_backup()
+    res = operations.merge_workspaces(s, source_ws_id="ws-alpha", target_ws_id="ws-beta")
+    s.close()
+    assert res.chats_moved == 2
+
+    s2 = storage.Storage.open_readonly(work)
+    headers = s2.read_headers()["allComposers"]
+    alpha_count = sum(
+        1 for h in headers
+        if (h.get("workspaceIdentifier") or {}).get("id") == "ws-alpha"
+    )
+    beta_count = sum(
+        1 for h in headers
+        if (h.get("workspaceIdentifier") or {}).get("id") == "ws-beta"
+    )
+    s2.close()
+    assert alpha_count == 0
+    assert beta_count == 3
