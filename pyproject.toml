@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cursor-chat-tool"
+version = "0.1.0"
+description = "Inventory, view, reassign, and export Cursor chats"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "prompt_toolkit>=3.0.43",
+]
+
+[project.scripts]
+cursor-chat-tool = "cursor_chat_tool.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cursor_chat_tool"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-snapshot>=0.9",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/cursor_chat_tool"]
