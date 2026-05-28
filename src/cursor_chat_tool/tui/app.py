@@ -1,12 +1,24 @@
-"""prompt_toolkit Application with screen stack and breadcrumb."""
+"""prompt_toolkit Application with a navigation stack and breadcrumb.
+
+Architecture: screens implement the :class:`Screen` protocol. A :class:`NavStack`
+holds the active screens; the top screen is always the one rendered. The
+``Application`` body reads ``nav.current.render()`` and its key bindings are the
+merge of a global ``KeyBindings`` and ``DynamicKeyBindings`` that read
+``nav.current.get_key_bindings()`` so the active screen's keys swap in
+automatically when the stack changes.
+"""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from prompt_toolkit.application import Application
-from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.key_binding import (
+    DynamicKeyBindings,
+    KeyBindings,
+    merge_key_bindings,
+)
 from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
@@ -20,46 +32,98 @@ class AppState:
     global_db: Path
     workspace_storage: Path
     workspaces_config: Path | None
-    breadcrumb: list[str] = field(default_factory=lambda: ["Workspaces"])
+
+
+@runtime_checkable
+class Screen(Protocol):
+    """A single TUI screen pushed onto the navigation stack."""
+
+    def title(self) -> str:
+        """Breadcrumb segment for this screen."""
+        ...
+
+    def render(self) -> list[tuple[str, str]]:
+        """Formatted-text fragments for the body."""
+        ...
+
+    def get_key_bindings(self) -> KeyBindings:
+        """Screen-specific key bindings."""
+        ...
+
+
+class NavStack:
+    """Holds the stack of screens; the top is the active screen."""
+
+    def __init__(self, root: Screen) -> None:
+        self.stack: list[Screen] = [root]
+
+    @property
+    def current(self) -> Screen:
+        return self.stack[-1]
+
+    def push(self, screen: Screen) -> None:
+        self.stack.append(screen)
+
+    def pop(self) -> Screen | None:
+        if len(self.stack) > 1:
+            return self.stack.pop()
+        return None
 
 
 _STYLE = Style.from_dict({
     "breadcrumb": "bg:#222222 #ffffff bold",
     "footer": "bg:#222222 #aaaaaa",
+    "header": "bold",
+    "row": "",
+    "row-selected": "reverse",
 })
 
 
 def _build_application(
     state: AppState,
+    nav: NavStack,
     inp: Any = None,
     output: Any = None,
 ) -> Application[int]:
     def breadcrumb_text() -> list[tuple[str, str]]:
         ro = " [READ-ONLY]" if state.readonly else ""
-        return [("class:breadcrumb", " › ".join(state.breadcrumb) + ro)]
+        crumb = " › ".join(s.title() for s in nav.stack)
+        return [("class:breadcrumb", crumb + ro)]
 
     breadcrumb_window = Window(
         content=FormattedTextControl(breadcrumb_text), height=1
     )
-    body = Window(content=FormattedTextControl(lambda: [("", "Press q to quit.")]))
+    body = Window(content=FormattedTextControl(lambda: nav.current.render()))
     footer = Window(
-        content=FormattedTextControl(lambda: [("class:footer", " [q] quit ")]), height=1
+        content=FormattedTextControl(
+            lambda: [("class:footer", " [q] quit  [esc] back  [↑/↓] move  [s] sort ")]
+        ),
+        height=1,
     )
     layout = Layout(HSplit([breadcrumb_window, body, footer]))
 
-    kb = KeyBindings()
+    global_kb = KeyBindings()
 
-    @kb.add("q")
+    @global_kb.add("q")
     def _(event: Any) -> None:
         event.app.exit(result=0)
 
-    @kb.add("c-c")
+    @global_kb.add("c-c")
     def _(event: Any) -> None:
         event.app.exit(result=130)
 
+    @global_kb.add("escape", eager=True)
+    def _(event: Any) -> None:
+        nav.pop()
+
+    key_bindings = merge_key_bindings([
+        global_kb,
+        DynamicKeyBindings(lambda: nav.current.get_key_bindings()),
+    ])
+
     return Application(
         layout=layout,
-        key_bindings=kb,
+        key_bindings=key_bindings,
         style=_STYLE,
         full_screen=True,
         input=inp,
@@ -87,6 +151,11 @@ def run_tui(
         workspace_storage=Path(workspace_storage),
         workspaces_config=Path(workspaces_config) if workspaces_config else None,
     )
-    app = _build_application(state, inp=input, output=output)
+
+    # Imported here to avoid a circular import (screen modules import from app).
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+
+    nav = NavStack(WorkspacesScreen(state))
+    app = _build_application(state, nav, inp=input, output=output)
     result = app.run()
     return result if isinstance(result, int) else 0
