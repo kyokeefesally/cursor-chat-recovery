@@ -65,3 +65,45 @@ def test_export_chat_json(minimal_db):
     parsed = _json.loads(out)
     assert parsed["composer_id"] == "c-alpha-1"
     assert len(parsed["bubbles"]) == 2
+
+
+def test_reassign_chats_moves_headers(minimal_db, tmp_path):
+    import shutil
+
+    from cursor_chat_tool import operations, storage
+    work = tmp_path / "state.vscdb"
+    shutil.copy(minimal_db, work)
+    backup_dir = tmp_path / "backups"
+    s = storage.Storage.open_rw(work, backup_dir=backup_dir, cursor_running_check=lambda: False)
+    s.ensure_session_backup()
+    res = operations.reassign_chats(s, ["c-alpha-1"], target_ws_id="ws-beta")
+    s.close()
+    assert res.composer_ids == ["c-alpha-1"]
+    assert res.to_workspace_id == "ws-beta"
+
+    s2 = storage.Storage.open_readonly(work)
+    h = next(x for x in s2.read_headers()["allComposers"] if x["composerId"] == "c-alpha-1")
+    assert h["workspaceIdentifier"]["id"] == "ws-beta"
+    s2.close()
+
+
+def test_reassign_roundtrip_identity(minimal_db, tmp_path):
+    import json
+    import shutil
+    from pathlib import Path
+
+    from cursor_chat_tool import operations, storage
+    work = tmp_path / "state.vscdb"
+    shutil.copy(minimal_db, work)
+    backup_dir = tmp_path / "backups"
+    s = storage.Storage.open_rw(work, backup_dir=backup_dir, cursor_running_check=lambda: False)
+    s.ensure_session_backup()
+    original = s.read_headers()
+    res = operations.reassign_chats(s, ["c-alpha-1"], target_ws_id="ws-beta")
+    backup = json.loads(Path(res.backup_path).read_text(encoding="utf-8"))
+    s.write_headers(backup, op_label="undo")
+    s.close()
+    s2 = storage.Storage.open_readonly(work)
+    restored = s2.read_headers()
+    s2.close()
+    assert restored == original

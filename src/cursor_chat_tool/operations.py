@@ -1,6 +1,7 @@
 """High-level operations over Storage. The only module that mutates."""
 from __future__ import annotations
 
+import copy
 import json as _json
 from collections import defaultdict
 from datetime import datetime
@@ -11,6 +12,7 @@ from cursor_chat_tool.model import (
     Bubble,
     ChatDetail,
     ChatHeader,
+    ReassignResult,
     Workspace,
     WorkspaceIdentifier,
 )
@@ -228,3 +230,41 @@ def export_chat(chat: ChatDetail, fmt: Literal["markdown", "json"] = "markdown")
         lines.append(b.text)
         lines.append("")
     return "\n".join(lines)
+
+
+def reassign_chats(
+    storage_: Storage,
+    composer_ids: list[str],
+    target_ws_id: str,
+) -> ReassignResult:
+    headers_data = storage_.read_headers()
+    headers_list = headers_data.get("allComposers", [])
+    target_wid = None
+    for h in headers_list:
+        wid = h.get("workspaceIdentifier") or {}
+        if wid.get("id") == target_ws_id:
+            target_wid = copy.deepcopy(wid)
+            break
+    if target_wid is None:
+        target_wid = {"id": target_ws_id}
+
+    from_ids: list[str] = []
+    new_list = []
+    for h in headers_list:
+        if h.get("composerId") in composer_ids:
+            from_ids.append((h.get("workspaceIdentifier") or {}).get("id", ""))
+            new_h = copy.deepcopy(h)
+            new_h["workspaceIdentifier"] = copy.deepcopy(target_wid)
+            new_list.append(new_h)
+        else:
+            new_list.append(h)
+    new_data = dict(headers_data)
+    new_data["allComposers"] = new_list
+
+    backup_path = storage_.write_headers(new_data, op_label=f"reassign_to_{target_ws_id[:12]}")
+    return ReassignResult(
+        backup_path=str(backup_path),
+        composer_ids=composer_ids,
+        from_workspace_ids=sorted(set(from_ids)),
+        to_workspace_id=target_ws_id,
+    )
