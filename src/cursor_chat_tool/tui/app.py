@@ -9,6 +9,7 @@ automatically when the stack changes.
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, runtime_checkable
@@ -68,6 +69,16 @@ class NavStack:
         if len(self.stack) > 1:
             return self.stack.pop()
         return None
+
+
+# Module-level reference to the active nav stack so dialog screens can pop
+# themselves without each carrying a back-reference. Set by ``run_tui``.
+_active_nav: NavStack | None = None
+
+
+def get_nav() -> NavStack | None:
+    """Return the active navigation stack (or None outside a running app)."""
+    return _active_nav
 
 
 _STYLE = Style.from_dict({
@@ -143,7 +154,9 @@ def run_tui(
     workspaces_config: Path | None = None,
     input: Any = None,  # noqa: A002
     output: Any = None,
+    cursor_running_check: Callable[[], bool] | None = None,
 ) -> int:
+    global _active_nav
     if global_db is None or workspace_storage is None:
         loc = paths.locate_cursor_dirs()
         global_db = global_db or loc.global_storage_db
@@ -158,23 +171,102 @@ def run_tui(
     )
 
     # Imported here to avoid a circular import (screen modules import from app).
+    from cursor_chat_tool import schema, storage
+    from cursor_chat_tool.tui import actions, dialogs
     from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
 
+    check = cursor_running_check or storage._default_cursor_running_check
+
     def open_chat(chat_header: Any) -> None:
-        # Lazy import to avoid a circular import (screen imports from app).
         from cursor_chat_tool.tui.screen_messages import MessagesScreen
 
         nav.push(
             MessagesScreen(state, chat_header.composer_id, chat_header.name)
         )
 
+    def on_reassign(ids: list[str]) -> None:
+        if state.readonly:
+            nav.push(
+                dialogs.ResultScreen(
+                    state, ["Read-only mode: mutations disabled."]
+                )
+            )
+            return
+
+        with storage.Storage.open_readonly(state.global_db) as s:
+            from cursor_chat_tool import operations
+
+            workspaces = operations.list_workspaces(
+                s, state.workspace_storage, state.workspaces_config
+            )
+
+        chats_depth = len(nav.stack)
+
+        def on_pick(target_ws: Any) -> None:
+            nav.pop()  # remove the pick screen
+
+            def on_yes() -> None:
+                backup_dir = Path.home() / ".cursor-chat-tool" / "backups"
+                # Unwind back to the chats screen before showing the result.
+                while len(nav.stack) > chats_depth:
+                    nav.pop()
+                try:
+                    res = actions.perform_reassign(
+                        state.global_db,
+                        backup_dir,
+                        ids,
+                        target_ws.identifier.id,
+                        cursor_running_check=check,
+                    )
+                except storage.CursorRunning as e:
+                    nav.push(
+                        dialogs.ResultScreen(
+                            state, [f"Reassign failed: {e}"]
+                        )
+                    )
+                    return
+                nav.push(
+                    dialogs.ResultScreen(
+                        state,
+                        [
+                            f"Reassigned {len(res.composer_ids)} chat(s) "
+                            f"to {target_ws.display_name}.",
+                            f"Backup: {res.backup_path}",
+                        ],
+                    )
+                )
+
+            nav.push(
+                dialogs.ConfirmScreen(
+                    state,
+                    f"Reassign {len(ids)} chat(s) to "
+                    f"{target_ws.display_name}? A backup will be written.",
+                    on_yes=on_yes,
+                )
+            )
+
+        nav.push(dialogs.PickTargetScreen(state, workspaces, on_pick=on_pick))
+
     def open_workspace(workspace: Any) -> None:
-        # Lazy import to avoid a circular import (screen imports from app).
         from cursor_chat_tool.tui.screen_chats import ChatsScreen
 
-        nav.push(ChatsScreen(state, workspace, on_open=open_chat))
+        nav.push(
+            ChatsScreen(
+                state, workspace, on_open=open_chat, on_reassign=on_reassign
+            )
+        )
 
-    nav = NavStack(WorkspacesScreen(state, on_open=open_workspace))
+    root: Screen
+    with storage.Storage.open_readonly(state.global_db) as s:
+        report = schema.detect_mismatch(s.connection)
+    if not report.ok:
+        state.readonly = True
+        root = dialogs.SchemaMismatchScreen(state, schema.agent_prompt(report))
+    else:
+        root = WorkspacesScreen(state, on_open=open_workspace)
+
+    nav = NavStack(root)
+    _active_nav = nav
     app = _build_application(state, nav, inp=input, output=output)
     result = app.run()
     return result if isinstance(result, int) else 0

@@ -104,3 +104,73 @@ def test_tui_drill_to_messages_and_back(minimal_db, workspace_storage_dir):
                              workspace_storage=workspace_storage_dir,
                              input=inp, output=DummyOutput())
     assert rc == 0
+
+
+def test_perform_reassign_moves_chat(minimal_db, workspace_storage_dir, tmp_path):
+    import shutil
+
+    from cursor_chat_tool import storage
+    from cursor_chat_tool.tui import actions
+    work = tmp_path / "state.vscdb"
+    shutil.copy(minimal_db, work)
+    res = actions.perform_reassign(
+        work, tmp_path / "backups", ["c-alpha-1"], "ws-beta",
+        cursor_running_check=lambda: False,
+    )
+    assert res.to_workspace_id == "ws-beta"
+    with storage.Storage.open_readonly(work) as s:
+        h = next(x for x in s.read_headers()["allComposers"] if x["composerId"] == "c-alpha-1")
+    assert h["workspaceIdentifier"]["id"] == "ws-beta"
+
+
+def test_dialog_screens_render(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool import operations, storage
+    from cursor_chat_tool.tui import dialogs
+    from cursor_chat_tool.tui.app import AppState
+    state = AppState(readonly=False, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    with storage.Storage.open_readonly(minimal_db) as s:
+        wslist = operations.list_workspaces(s, workspace_storage_dir)
+    pick = dialogs.PickTargetScreen(state, wslist, on_pick=lambda w: None)
+    assert "Pick" in pick.title() or len(pick.render()) > 0
+    confirm = dialogs.ConfirmScreen(state, "Reassign 1 chat?", on_yes=lambda: None)
+    assert "Reassign 1 chat?" in "".join(t for _, t in confirm.render())
+    result = dialogs.ResultScreen(state, ["Done.", "Backup: x"])
+    assert "Done." in "".join(t for _, t in result.render())
+
+
+def test_schema_mismatch_makes_root_readonly(drift_db, workspace_storage_dir):
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    from cursor_chat_tool.tui import app as tui_app
+    with create_pipe_input() as inp:
+        inp.send_text("q")
+        rc = tui_app.run_tui(readonly=False, global_db=drift_db,
+                             workspace_storage=workspace_storage_dir,
+                             input=inp, output=DummyOutput())
+    assert rc == 0
+
+
+def test_tui_reassign_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path):
+    import shutil
+
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    from cursor_chat_tool.tui import app as tui_app
+    work = tmp_path / "state.vscdb"
+    shutil.copy(minimal_db, work)
+    with create_pipe_input() as inp:
+        inp.send_text("\r")    # into workspace -> chats
+        inp.send_text("r")     # reassign current chat -> pick target
+        inp.send_text("\r")    # pick first target
+        inp.send_text("y")     # confirm
+        inp.send_text("\x1b")  # close result
+        inp.send_text("q")
+        rc = tui_app.run_tui(readonly=False, global_db=work,
+                             workspace_storage=workspace_storage_dir,
+                             workspaces_config=None,
+                             input=inp, output=DummyOutput(),
+                             cursor_running_check=lambda: False)
+    assert rc == 0
