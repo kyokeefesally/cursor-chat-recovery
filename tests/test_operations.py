@@ -43,3 +43,25 @@ def test_load_chat_parses_bubbles(minimal_db):
     assert chat.bubbles[0].role == "user"
     assert chat.bubbles[1].role == "assistant"
     assert chat.bubbles[1].text == "Hi there"
+
+
+def test_export_chat_markdown(minimal_db):
+    from cursor_chat_tool import operations, storage
+    with storage.Storage.open_readonly(minimal_db) as s:
+        chat = operations.load_chat(s, "c-alpha-1")
+    out = operations.export_chat(chat, fmt="markdown")
+    assert "# Alpha chat 1" in out
+    assert "## USER" in out
+    assert "Hi there" in out
+
+
+def test_export_chat_json(minimal_db):
+    import json as _json
+
+    from cursor_chat_tool import operations, storage
+    with storage.Storage.open_readonly(minimal_db) as s:
+        chat = operations.load_chat(s, "c-alpha-1")
+    out = operations.export_chat(chat, fmt="json")
+    parsed = _json.loads(out)
+    assert parsed["composer_id"] == "c-alpha-1"
+    assert len(parsed["bubbles"]) == 2

@@ -1,10 +1,11 @@
 """High-level operations over Storage. The only module that mutates."""
 from __future__ import annotations
 
+import json as _json
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from cursor_chat_tool.model import (
     Bubble,
@@ -195,3 +196,35 @@ def list_chats(
     if limit is not None:
         matched = matched[:limit]
     return [_parse_header(h, storage_) for h in matched]
+
+
+def export_chat(chat: ChatDetail, fmt: Literal["markdown", "json"] = "markdown") -> str:
+    if fmt == "json":
+        return _json.dumps({
+            "composer_id": chat.header.composer_id,
+            "name": chat.header.name,
+            "workspace_id": chat.header.workspace_id,
+            "created_at": chat.header.created_at.isoformat(),
+            "bubbles": [
+                {
+                    "bubble_id": b.bubble_id,
+                    "role": b.role,
+                    "text": b.text,
+                    "created_at": b.created_at.isoformat() if b.created_at else None,
+                }
+                for b in chat.bubbles
+            ],
+        }, indent=2)
+
+    lines = [f"# {chat.header.name or chat.header.composer_id}", ""]
+    lines.append(f"_Created: {chat.header.created_at.isoformat()}  ·  "
+                 f"workspace: {chat.header.workspace_id}_")
+    lines.append("")
+    for b in chat.bubbles:
+        lines.append(f"## {b.role.upper()}")
+        if b.created_at:
+            lines.append(f"_{b.created_at.isoformat()}_")
+        lines.append("")
+        lines.append(b.text)
+        lines.append("")
+    return "\n".join(lines)
