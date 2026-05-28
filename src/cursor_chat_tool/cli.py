@@ -106,9 +106,14 @@ def _do_merge(args: argparse.Namespace) -> int:
 
 
 def _do_tui(args: argparse.Namespace) -> int:
-    # Real TUI is wired in a later task. Stub for now.
-    print("TUI not yet implemented", file=sys.stderr)
-    return 0
+    from cursor_chat_tool.tui.app import run_tui
+    global_db, ws_dir, workspaces_dir = _resolve_paths(args)
+    return run_tui(
+        readonly=args.readonly,
+        global_db=global_db,
+        workspace_storage=ws_dir,
+        workspaces_config=workspaces_dir,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
