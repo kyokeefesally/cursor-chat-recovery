@@ -41,13 +41,39 @@ def _parse_workspace_identifier(raw: dict[str, Any]) -> WorkspaceIdentifier:
     )
 
 
+def _coerce_ts(ts: Any) -> datetime | None:
+    """Best-effort conversion of a Cursor timestamp to datetime.
+
+    Cursor stores timestamps inconsistently: epoch-milliseconds as int or numeric
+    string, ISO-8601 strings, or omits them entirely. Returns None when unparseable.
+    """
+    if ts is None or ts == "":
+        return None
+    if isinstance(ts, bool):  # bool is an int subclass; treat as no timestamp
+        return None
+    if isinstance(ts, (int, float)):
+        return datetime.fromtimestamp(ts / 1000)
+    if isinstance(ts, str):
+        try:
+            return datetime.fromtimestamp(int(ts) / 1000)
+        except ValueError:
+            pass
+        try:
+            return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return None
+
+
 def _display_name(ident: WorkspaceIdentifier) -> str:
+    if ident.id == "empty-window":
+        return "No folder (empty window)"
     if ident.config_path and "Workspaces/" in ident.config_path:
         ts = ident.config_path.rstrip("/").split("/")[-2] if "/" in ident.config_path else "?"
         return f"Untitled ({ts})"
     if ident.uri:
         return ident.uri.rstrip("/").split("/")[-1] or ident.uri
-    return f"Orphan {ident.id}"
+    return ident.id
 
 
 def list_workspaces(
@@ -136,9 +162,8 @@ def list_workspaces(
 
 def _parse_header(h: dict[str, Any], storage_: Storage) -> ChatHeader:
     cid = h["composerId"]
-    created = datetime.fromtimestamp(int(h["createdAt"]) / 1000)
-    last_updated = h.get("lastUpdatedAt")
-    last_dt = datetime.fromtimestamp(int(last_updated) / 1000) if last_updated else None
+    created = _coerce_ts(h.get("createdAt")) or datetime.min
+    last_dt = _coerce_ts(h.get("lastUpdatedAt"))
     ws_id = (h.get("workspaceIdentifier") or {}).get("id", "")
     return ChatHeader(
         composer_id=cid,
@@ -158,12 +183,11 @@ _ROLE_BY_TYPE: dict[int, str] = {1: "user", 2: "assistant"}
 def _parse_bubble(key: str, raw: dict[str, Any]) -> Bubble:
     bubble_id = raw.get("bubbleId") or key.rsplit(":", 1)[-1]
     role = _ROLE_BY_TYPE.get(raw.get("type"), "unknown")  # type: ignore[arg-type]
-    ts = raw.get("createdAt")
     return Bubble(
         bubble_id=str(bubble_id),
         role=role,  # type: ignore[arg-type]
         text=str(raw.get("text") or raw.get("richText") or ""),
-        created_at=datetime.fromtimestamp(ts / 1000) if ts else None,
+        created_at=_coerce_ts(raw.get("createdAt")),
         raw=raw,
     )
 

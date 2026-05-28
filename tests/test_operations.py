@@ -1,4 +1,41 @@
+from datetime import datetime
+
 from cursor_chat_tool import operations, storage
+from cursor_chat_tool.model import WorkspaceIdentifier
+
+
+def test_coerce_ts_handles_int_str_iso_and_missing():
+    # epoch-ms int
+    assert operations._coerce_ts(1_700_000_000_000) == datetime.fromtimestamp(1_700_000_000)
+    # epoch-ms numeric string
+    assert operations._coerce_ts("1700000000000") == datetime.fromtimestamp(1_700_000_000)
+    # ISO string
+    assert operations._coerce_ts("2026-05-01T12:00:00") == datetime(2026, 5, 1, 12, 0, 0)
+    # missing / empty / unparseable → None
+    assert operations._coerce_ts(None) is None
+    assert operations._coerce_ts("") is None
+    assert operations._coerce_ts("not-a-date") is None
+
+
+def test_parse_bubble_tolerates_string_and_missing_timestamp():
+    # real Cursor bubbles sometimes store createdAt as a string or omit it entirely
+    b_str = operations._parse_bubble(
+        "bubbleId:c:x", {"type": 1, "text": "hi", "createdAt": "1700000000000"}
+    )
+    assert b_str.role == "user"
+    assert b_str.created_at == datetime.fromtimestamp(1_700_000_000)
+    b_missing = operations._parse_bubble("bubbleId:c:y", {"type": 2, "text": "yo"})
+    assert b_missing.role == "assistant"
+    assert b_missing.created_at is None
+
+
+def test_display_name_special_cases():
+    ew = WorkspaceIdentifier(id="empty-window", uri=None, scheme=None,
+                             is_remote=False, remote_host=None, config_path=None)
+    assert operations._display_name(ew) == "No folder (empty window)"
+    bare = WorkspaceIdentifier(id="1778227613463", uri=None, scheme=None,
+                               is_remote=False, remote_host=None, config_path=None)
+    assert operations._display_name(bare) == "1778227613463"
 
 
 def test_list_workspaces_classifies_health(minimal_db, workspace_storage_dir):
