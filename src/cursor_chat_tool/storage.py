@@ -120,7 +120,7 @@ class Storage:
         row = self._con.execute(
             "SELECT value FROM ItemTable WHERE key='composer.composerHeaders'"
         ).fetchone()
-        if not row:
+        if not row or row[0] is None:
             return {"allComposers": []}
         return json.loads(row[0])  # type: ignore[no-any-return]
 
@@ -128,14 +128,17 @@ class Storage:
         row = self._con.execute(
             "SELECT value FROM cursorDiskKV WHERE key=?", (key,)
         ).fetchone()
-        return json.loads(row[0]) if row else None
+        if not row or row[0] is None:
+            return None
+        return json.loads(row[0])  # type: ignore[no-any-return]
 
     def read_kv_by_prefix(self, prefix: str) -> list[tuple[str, dict[str, Any]]]:
         rows = self._con.execute(
             "SELECT key, value FROM cursorDiskKV WHERE key LIKE ?",
             (prefix + "%",),
         ).fetchall()
-        return [(str(k), json.loads(v)) for k, v in rows]
+        # Some rows carry NULL values in real Cursor DBs; skip those rather than crash.
+        return [(str(k), json.loads(v)) for k, v in rows if v is not None]
 
     def count_kv_by_prefix(self, prefix: str) -> int:
         row = self._con.execute(

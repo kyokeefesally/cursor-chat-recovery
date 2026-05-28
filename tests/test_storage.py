@@ -25,6 +25,24 @@ def test_read_kv_by_prefix(minimal_db):
     s.close()
 
 
+def test_read_kv_skips_null_values(tmp_path):
+    # Real Cursor DBs have NULL-valued cursorDiskKV rows; reads must not crash.
+    import sqlite3
+    db = tmp_path / "nulls.vscdb"
+    con = sqlite3.connect(db)
+    con.execute("CREATE TABLE ItemTable (key TEXT PRIMARY KEY, value TEXT)")
+    con.execute("CREATE TABLE cursorDiskKV (key TEXT PRIMARY KEY, value TEXT)")
+    con.execute("INSERT INTO cursorDiskKV VALUES ('bubbleId:c:good', '{\"text\":\"hi\"}')")
+    con.execute("INSERT INTO cursorDiskKV VALUES ('bubbleId:c:null', NULL)")
+    con.commit()
+    con.close()
+    s = storage.Storage.open_readonly(db)
+    rows = s.read_kv_by_prefix("bubbleId:c:")
+    assert len(rows) == 1  # the NULL row is skipped
+    assert s.read_kv("bubbleId:c:null") is None
+    s.close()
+
+
 def test_count_kv_by_prefix(minimal_db):
     s = storage.Storage.open_readonly(minimal_db)
     assert s.count_kv_by_prefix("bubbleId:c-alpha-1:") == 2
