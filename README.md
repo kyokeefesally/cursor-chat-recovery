@@ -8,9 +8,16 @@ Cursor identifies each workspace by a hash of its identifier URI. Reopening a pr
 
 ## Install
 
-    uv tool install cursor-chat-tool
-    # or
-    pipx install cursor-chat-tool
+Not published to PyPI — install from a local checkout of this repo:
+
+    git clone <repo-url> cursor-chat-tool
+    cd cursor-chat-tool
+    uv tool install .        # installs the `cursor-chat-tool` executable to ~/.local/bin
+    # or, with pipx:
+    pipx install .
+
+To run without installing (from the repo dir): `uv run cursor-chat-tool`.
+After `uv tool install`, ensure `~/.local/bin` is on your PATH (run `uv tool update-shell` once if needed).
 
 ## Use
 
