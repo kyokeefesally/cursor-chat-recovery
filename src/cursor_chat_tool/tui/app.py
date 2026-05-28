@@ -155,7 +155,13 @@ def run_tui(
     # Imported here to avoid a circular import (screen modules import from app).
     from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
 
-    nav = NavStack(WorkspacesScreen(state))
+    def open_workspace(workspace: Any) -> None:
+        # Lazy import to avoid a circular import (screen imports from app).
+        from cursor_chat_tool.tui.screen_chats import ChatsScreen
+
+        nav.push(ChatsScreen(state, workspace))
+
+    nav = NavStack(WorkspacesScreen(state, on_open=open_workspace))
     app = _build_application(state, nav, inp=input, output=output)
     result = app.run()
     return result if isinstance(result, int) else 0

@@ -1,0 +1,123 @@
+"""Chats screen: lists a workspace's chats with cursor and multi-select."""
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any
+
+from prompt_toolkit.key_binding import KeyBindings
+
+from cursor_chat_tool import operations
+from cursor_chat_tool.model import ChatHeader, Workspace
+from cursor_chat_tool.storage import Storage
+from cursor_chat_tool.tui.app import AppState
+
+_NAME_WIDTH = 40
+
+
+class ChatsScreen:
+    """Screen listing the chats belonging to a single workspace."""
+
+    def __init__(
+        self,
+        state: AppState,
+        workspace: Workspace,
+        on_open: Callable[[ChatHeader], None] | None = None,
+        on_reassign: Callable[[list[str]], None] | None = None,
+        on_export: Callable[[list[str]], None] | None = None,
+    ) -> None:
+        self.state = state
+        self.workspace = workspace
+        self.on_open = on_open
+        self.on_reassign = on_reassign
+        self.on_export = on_export
+        self.cursor: int = 0
+        self.selected_ids: set[str] = set()
+        self.chats: list[ChatHeader] = self._load()
+
+    def _load(self) -> list[ChatHeader]:
+        with Storage.open_readonly(self.state.global_db) as storage_:
+            return operations.list_chats(storage_, self.workspace.identifier.id)
+
+    # -- Screen protocol --------------------------------------------------
+
+    def title(self) -> str:
+        return self.workspace.display_name
+
+    def render(self) -> list[tuple[str, str]]:
+        rows = self.chats
+        if rows and self.cursor >= len(rows):
+            self.cursor = len(rows) - 1
+        if self.cursor < 0:
+            self.cursor = 0
+
+        fragments: list[tuple[str, str]] = []
+        header = f"   {'DATE':<16}  {'NAME':<{_NAME_WIDTH}}  MSGS"
+        fragments.append(("class:header", header + "\n"))
+        fragments.append(("class:header", "  " + "─" * (len(header) + 4) + "\n"))
+
+        if not rows:
+            fragments.append(("class:row", "  (no chats)\n"))
+            return fragments
+
+        for i, c in enumerate(rows):
+            marker = "> " if i == self.cursor else "  "
+            mark = "•" if c.composer_id in self.selected_ids else " "
+            ts = c.last_updated_at or c.created_at
+            date = ts.strftime("%Y-%m-%d %H:%M") if ts else "-"
+            name = c.name or "(unnamed)"
+            if len(name) > _NAME_WIDTH:
+                name = name[: _NAME_WIDTH - 1] + "…"
+            count = c.bubble_count_hint or 0
+            line = f"{marker}{mark} {date:<16}  {name:<{_NAME_WIDTH}}  {count:>4}"
+            cls = "class:row-selected" if i == self.cursor else "class:row"
+            fragments.append((cls, line + "\n"))
+
+        return fragments
+
+    def _ids_for_action(self) -> list[str]:
+        if self.selected_ids:
+            return sorted(self.selected_ids)
+        if 0 <= self.cursor < len(self.chats):
+            return [self.chats[self.cursor].composer_id]
+        return []
+
+    def get_key_bindings(self) -> KeyBindings:
+        kb = KeyBindings()
+
+        @kb.add("up")
+        def _(event: Any) -> None:
+            if self.cursor > 0:
+                self.cursor -= 1
+
+        @kb.add("down")
+        def _(event: Any) -> None:
+            if self.cursor < len(self.chats) - 1:
+                self.cursor += 1
+
+        @kb.add("space")
+        def _(event: Any) -> None:
+            if 0 <= self.cursor < len(self.chats):
+                cid = self.chats[self.cursor].composer_id
+                if cid in self.selected_ids:
+                    self.selected_ids.discard(cid)
+                else:
+                    self.selected_ids.add(cid)
+
+        @kb.add("enter")
+        def _(event: Any) -> None:
+            if self.on_open is not None and 0 <= self.cursor < len(self.chats):
+                self.on_open(self.chats[self.cursor])
+
+        @kb.add("r")
+        def _(event: Any) -> None:
+            ids = self._ids_for_action()
+            if self.on_reassign is not None and ids:
+                self.on_reassign(ids)
+
+        @kb.add("e")
+        def _(event: Any) -> None:
+            ids = self._ids_for_action()
+            if self.on_export is not None and ids:
+                self.on_export(ids)
+
+        return kb
