@@ -16,3 +16,19 @@ def test_list_workspaces_classifies_health(minimal_db, workspace_storage_dir):
     assert by_id["ws-epsilon"].health == "config-missing"
     sorted_ids = [w.identifier.id for w in ws_list]
     assert sorted_ids.index("ws-epsilon") < sorted_ids.index("ws-alpha")
+
+
+def test_list_chats_for_workspace_sorted_desc(minimal_db):
+    from cursor_chat_tool import operations, storage
+    with storage.Storage.open_readonly(minimal_db) as s:
+        chats = operations.list_chats(s, "ws-alpha")
+    assert [c.composer_id for c in chats] == ["c-alpha-2", "c-alpha-1"]
+    assert chats[0].bubble_count_hint == 1
+    assert chats[1].bubble_count_hint == 2
+
+
+def test_list_chats_limit(minimal_db):
+    from cursor_chat_tool import operations, storage
+    with storage.Storage.open_readonly(minimal_db) as s:
+        chats = operations.list_chats(s, "ws-alpha", limit=1)
+    assert len(chats) == 1

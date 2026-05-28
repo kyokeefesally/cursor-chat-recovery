@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from cursor_chat_tool.model import (
+    ChatHeader,
     Workspace,
     WorkspaceIdentifier,
 )
@@ -123,3 +124,37 @@ def list_workspaces(
 
     results.sort(key=lambda w: w.last_chat_at or datetime.min, reverse=True)
     return results
+
+
+def _parse_header(h: dict[str, Any], storage_: Storage) -> ChatHeader:
+    cid = h["composerId"]
+    created = datetime.fromtimestamp(int(h["createdAt"]) / 1000)
+    last_updated = h.get("lastUpdatedAt")
+    last_dt = datetime.fromtimestamp(int(last_updated) / 1000) if last_updated else None
+    ws_id = (h.get("workspaceIdentifier") or {}).get("id", "")
+    return ChatHeader(
+        composer_id=cid,
+        name=h.get("name"),
+        created_at=created,
+        last_updated_at=last_dt,
+        workspace_id=str(ws_id),
+        subtitle=h.get("subtitle"),
+        bubble_count_hint=storage_.count_kv_by_prefix(f"bubbleId:{cid}:"),
+        raw=h,
+    )
+
+
+def list_chats(
+    storage_: Storage,
+    workspace_id: str,
+    limit: int | None = None,
+) -> list[ChatHeader]:
+    headers_data = storage_.read_headers()
+    matched = [
+        h for h in headers_data.get("allComposers", [])
+        if (h.get("workspaceIdentifier") or {}).get("id") == workspace_id
+    ]
+    matched.sort(key=lambda h: h.get("lastUpdatedAt") or h.get("createdAt", 0), reverse=True)
+    if limit is not None:
+        matched = matched[:limit]
+    return [_parse_header(h, storage_) for h in matched]
