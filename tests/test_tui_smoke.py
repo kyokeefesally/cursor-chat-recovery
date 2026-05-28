@@ -76,3 +76,31 @@ def test_tui_drill_into_workspace_and_back(minimal_db, workspace_storage_dir):
                              workspace_storage=workspace_storage_dir,
                              input=inp, output=DummyOutput())
     assert rc == 0
+
+
+def test_messages_screen_renders(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_messages import MessagesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = MessagesScreen(state, "c-alpha-1")
+    text = "".join(t for _, t in screen.render())
+    assert "Hello" in text
+    assert "Hi there" in text
+
+
+def test_tui_drill_to_messages_and_back(minimal_db, workspace_storage_dir):
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    from cursor_chat_tool.tui import app as tui_app
+    with create_pipe_input() as inp:
+        inp.send_text("\r")    # into workspace -> chats
+        inp.send_text("\r")    # into chat -> messages
+        inp.send_text("\x1b")  # back to chats
+        inp.send_text("\x1b")  # back to workspaces
+        inp.send_text("q")
+        rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
+                             workspace_storage=workspace_storage_dir,
+                             input=inp, output=DummyOutput())
+    assert rc == 0

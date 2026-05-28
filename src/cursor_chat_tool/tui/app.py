@@ -76,6 +76,11 @@ _STYLE = Style.from_dict({
     "header": "bold",
     "row": "",
     "row-selected": "reverse",
+    "role-user": "bold #5fafff",
+    "role-assistant": "bold #5fd75f",
+    "role-system": "bold #aaaaaa",
+    "role-tool": "bold #d7af5f",
+    "role-unknown": "bold",
 })
 
 
@@ -155,11 +160,19 @@ def run_tui(
     # Imported here to avoid a circular import (screen modules import from app).
     from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
 
+    def open_chat(chat_header: Any) -> None:
+        # Lazy import to avoid a circular import (screen imports from app).
+        from cursor_chat_tool.tui.screen_messages import MessagesScreen
+
+        nav.push(
+            MessagesScreen(state, chat_header.composer_id, chat_header.name)
+        )
+
     def open_workspace(workspace: Any) -> None:
         # Lazy import to avoid a circular import (screen imports from app).
         from cursor_chat_tool.tui.screen_chats import ChatsScreen
 
-        nav.push(ChatsScreen(state, workspace))
+        nav.push(ChatsScreen(state, workspace, on_open=open_chat))
 
     nav = NavStack(WorkspacesScreen(state, on_open=open_workspace))
     app = _build_application(state, nav, inp=input, output=output)
