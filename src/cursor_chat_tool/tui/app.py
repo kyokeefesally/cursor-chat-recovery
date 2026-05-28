@@ -177,11 +177,40 @@ def run_tui(
 
     check = cursor_running_check or storage._default_cursor_running_check
 
+    def on_export(ids: list[str]) -> None:
+        chats_depth = len(nav.stack)
+        default_dir = str(Path.home() / ".cursor-chat-tool" / "exports")
+
+        def do_export(dir_str: str) -> None:
+            while len(nav.stack) > chats_depth:
+                nav.pop()
+            paths = actions.export_chats(
+                state.global_db, ids, Path(dir_str), fmt="markdown"
+            )
+            nav.push(
+                dialogs.ResultScreen(
+                    state,
+                    [f"Exported {len(paths)} file(s) to {dir_str}"]
+                    + [str(p) for p in paths],
+                )
+            )
+
+        nav.push(
+            dialogs.ExportPathScreen(
+                state, default_dir=default_dir, on_submit=do_export
+            )
+        )
+
     def open_chat(chat_header: Any) -> None:
         from cursor_chat_tool.tui.screen_messages import MessagesScreen
 
         nav.push(
-            MessagesScreen(state, chat_header.composer_id, chat_header.name)
+            MessagesScreen(
+                state,
+                chat_header.composer_id,
+                chat_header.name,
+                on_export=on_export,
+            )
         )
 
     def on_reassign(ids: list[str]) -> None:
@@ -252,7 +281,11 @@ def run_tui(
 
         nav.push(
             ChatsScreen(
-                state, workspace, on_open=open_chat, on_reassign=on_reassign
+                state,
+                workspace,
+                on_open=open_chat,
+                on_reassign=on_reassign,
+                on_export=on_export,
             )
         )
 

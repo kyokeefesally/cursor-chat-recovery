@@ -135,6 +135,48 @@ class ResultScreen:
         return KeyBindings()
 
 
+class ExportPathScreen:
+    """Confirms an output directory; ``enter`` submits, Esc cancels.
+
+    For v1 the path is not live-editable: ``enter`` submits ``default_dir``.
+    """
+
+    def __init__(
+        self,
+        state: AppState,
+        default_dir: str,
+        on_submit: Callable[[str], None],
+    ) -> None:
+        from prompt_toolkit.buffer import Buffer
+
+        self.state = state
+        self.default_dir = default_dir
+        self.on_submit = on_submit
+        self.buffer = Buffer()
+        self.buffer.text = default_dir
+
+    def title(self) -> str:
+        return "Export"
+
+    def render(self) -> list[tuple[str, str]]:
+        return [
+            (
+                "class:header",
+                "Export to directory (Enter to save, Esc to cancel):\n\n",
+            ),
+            ("class:row", "  " + self.buffer.text + "\n"),
+        ]
+
+    def get_key_bindings(self) -> KeyBindings:
+        kb = KeyBindings()
+
+        @kb.add("enter")
+        def _(event: Any) -> None:
+            self.on_submit(self.default_dir)
+
+        return kb
+
+
 class SchemaMismatchScreen:
     """Root screen shown when the DB schema does not match; ``q`` quits."""
 

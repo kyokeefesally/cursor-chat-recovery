@@ -174,3 +174,44 @@ def test_tui_reassign_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path)
                              input=inp, output=DummyOutput(),
                              cursor_running_check=lambda: False)
     assert rc == 0
+
+
+def test_export_chats_writes_files(minimal_db, workspace_storage_dir, tmp_path):
+    from cursor_chat_tool.tui import actions
+    out = tmp_path / "exports"
+    paths = actions.export_chats(minimal_db, ["c-alpha-1"], out, fmt="markdown")
+    assert len(paths) == 1
+    assert paths[0].exists()
+    content = paths[0].read_text(encoding="utf-8")
+    assert "Alpha chat 1" in content
+    assert "Hi there" in content
+
+
+def test_export_chats_json(minimal_db, workspace_storage_dir, tmp_path):
+    import json
+
+    from cursor_chat_tool.tui import actions
+    out = tmp_path / "exports"
+    paths = actions.export_chats(minimal_db, ["c-alpha-1"], out, fmt="json")
+    assert len(paths) == 1
+    data = json.loads(paths[0].read_text(encoding="utf-8"))
+    assert data["composer_id"] == "c-alpha-1"
+
+
+def test_tui_export_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path, monkeypatch):
+    import pathlib
+    monkeypatch.setattr(pathlib.Path, "home", classmethod(lambda cls: tmp_path))
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    from cursor_chat_tool.tui import app as tui_app
+    with create_pipe_input() as inp:
+        inp.send_text("\r")    # into workspace -> chats
+        inp.send_text("e")     # export current chat -> export path screen
+        inp.send_text("\r")    # submit default dir -> performs export -> result
+        inp.send_text("\x1b")  # close result
+        inp.send_text("q")
+        rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
+                             workspace_storage=workspace_storage_dir,
+                             input=inp, output=DummyOutput())
+    assert rc == 0

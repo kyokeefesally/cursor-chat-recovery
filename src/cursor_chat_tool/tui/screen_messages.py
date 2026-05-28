@@ -1,6 +1,9 @@
 """Messages screen: renders a single chat's conversation bubbles."""
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 from prompt_toolkit.key_binding import KeyBindings
 
 from cursor_chat_tool import operations
@@ -24,10 +27,12 @@ class MessagesScreen:
         state: AppState,
         composer_id: str,
         chat_name: str | None = None,
+        on_export: Callable[[list[str]], None] | None = None,
     ) -> None:
         self.state = state
         self.composer_id = composer_id
         self.chat_name = chat_name
+        self.on_export = on_export
         with Storage.open_readonly(state.global_db) as s:
             self.chat: ChatDetail = operations.load_chat(s, composer_id)
 
@@ -60,4 +65,11 @@ class MessagesScreen:
         return fragments
 
     def get_key_bindings(self) -> KeyBindings:
-        return KeyBindings()
+        kb = KeyBindings()
+
+        @kb.add("e")
+        def _(event: Any) -> None:
+            if self.on_export is not None:
+                self.on_export([self.chat.header.composer_id])
+
+        return kb
