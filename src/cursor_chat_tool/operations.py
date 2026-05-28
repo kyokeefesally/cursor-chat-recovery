@@ -86,7 +86,9 @@ def list_workspaces(
         on_disk = ws_id in on_disk_ids
         is_obs = ws_id in obsolete_ids
         config_exists = True
-        if ident.config_path and workspaces_config_dir is not None:
+        # Only check config existence for local-file configs. Remote (vscode-remote)
+        # config paths can't be stat'd on this machine, so we never flag them missing.
+        if ident.config_path and workspaces_config_dir is not None and not ident.is_remote:
             from urllib.parse import unquote, urlparse
             p = unquote(urlparse(ident.config_path).path)
             if p.startswith("/") and len(p) > 2 and p[2] == ":":

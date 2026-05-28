@@ -13,9 +13,19 @@ from pathlib import Path
 FIXTURES = Path(__file__).parent
 
 
-def make_header(composer_id, name, created_ms, ws_id, ws_uri=None, ws_config_path=None):
+def make_header(composer_id, name, created_ms, ws_id, ws_uri=None, ws_config_path=None,
+                ws_remote_config=None):
     wid = {"id": ws_id}
-    if ws_config_path:
+    if ws_remote_config:
+        # A remote (ssh) multi-folder workspace: configPath is a vscode-remote URI
+        # that cannot be stat'd on the local machine.
+        wid["configPath"] = {
+            "external": ws_remote_config,
+            "scheme": "vscode-remote",
+            "authority": "ssh-remote+host",
+            "path": ws_remote_config.split("host", 1)[-1],
+        }
+    elif ws_config_path:
         wid["configPath"] = {
             "external": f"file:///{ws_config_path.replace(chr(92), '/')}",
             "scheme": "file",
@@ -92,6 +102,8 @@ def make_minimal():
                     ws_uri="file:///tmp/gamma"),
         make_header("c-epsilon-1", "Untitled chat", 1_700_000_400_000, "ws-epsilon",
                     ws_config_path="Workspaces/1700000000000/workspace.json"),
+        make_header("c-remote-1", "Remote chat", 1_700_000_050_000, "ws-remote",
+                    ws_remote_config="vscode-remote://ssh-remote+host/srv/proj/proj.code-workspace"),
     ]
     bubbles = {
         "c-alpha-1": [
@@ -102,13 +114,14 @@ def make_minimal():
         "c-beta-1": [make_bubble("b4", 1, "B", 1_700_000_200_000)],
         "c-gamma-1": [make_bubble("b5", 1, "G", 1_700_000_300_000)],
         "c-epsilon-1": [make_bubble("b6", 1, "E", 1_700_000_400_000)],
+        "c-remote-1": [make_bubble("b7", 1, "R", 1_700_000_050_000)],
     }
     write_db(FIXTURES / "globalStorage_minimal.vscdb", headers, bubbles)
 
     ws_root = FIXTURES / "workspaceStorage"
     if ws_root.exists():
         shutil.rmtree(ws_root)
-    for ws_id in ["ws-alpha", "ws-beta", "ws-delta"]:
+    for ws_id in ["ws-alpha", "ws-beta", "ws-delta", "ws-remote"]:
         (ws_root / ws_id).mkdir(parents=True)
         (ws_root / ws_id / "state.vscdb").write_bytes(b"")
     (ws_root / "ws-beta" / "obsolete").write_text("")

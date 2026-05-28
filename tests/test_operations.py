@@ -14,6 +14,9 @@ def test_list_workspaces_classifies_health(minimal_db, workspace_storage_dir):
     assert by_id["ws-gamma"].health == "orphan"
     assert by_id["ws-delta"].health == "empty-storage"
     assert by_id["ws-epsilon"].health == "config-missing"
+    # Remote (vscode-remote) configPath can't be stat'd locally → never flagged missing
+    assert by_id["ws-remote"].health == "ok"
+    assert by_id["ws-remote"].identifier.is_remote is True
     sorted_ids = [w.identifier.id for w in ws_list]
     assert sorted_ids.index("ws-epsilon") < sorted_ids.index("ws-alpha")
 

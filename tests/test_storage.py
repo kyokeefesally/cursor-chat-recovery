@@ -9,7 +9,7 @@ from cursor_chat_tool import storage
 def test_open_readonly(minimal_db):
     s = storage.Storage.open_readonly(minimal_db)
     headers = s.read_headers()
-    assert len(headers["allComposers"]) == 5
+    assert len(headers["allComposers"]) == 6
     s.close()
 
 
@@ -77,7 +77,7 @@ def test_write_headers_creates_per_op_backup_and_persists(minimal_db, tmp_path):
     backups = list(backup_dir.glob("composerHeaders_*_test.json"))
     assert len(backups) == 1
     restored = json.loads(backups[0].read_text(encoding="utf-8"))
-    assert len(restored["allComposers"]) == 5
+    assert len(restored["allComposers"]) == 6
 
 
 def test_wal_checkpoint_runs_outside_txn(minimal_db, tmp_path, monkeypatch):
