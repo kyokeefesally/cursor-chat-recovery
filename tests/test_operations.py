@@ -32,3 +32,14 @@ def test_list_chats_limit(minimal_db):
     with storage.Storage.open_readonly(minimal_db) as s:
         chats = operations.list_chats(s, "ws-alpha", limit=1)
     assert len(chats) == 1
+
+
+def test_load_chat_parses_bubbles(minimal_db):
+    from cursor_chat_tool import operations, storage
+    with storage.Storage.open_readonly(minimal_db) as s:
+        chat = operations.load_chat(s, "c-alpha-1")
+    assert chat.header.composer_id == "c-alpha-1"
+    assert len(chat.bubbles) == 2
+    assert chat.bubbles[0].role == "user"
+    assert chat.bubbles[1].role == "assistant"
+    assert chat.bubbles[1].text == "Hi there"

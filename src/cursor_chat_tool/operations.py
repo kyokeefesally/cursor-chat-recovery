@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from cursor_chat_tool.model import (
+    Bubble,
+    ChatDetail,
     ChatHeader,
     Workspace,
     WorkspaceIdentifier,
@@ -142,6 +144,41 @@ def _parse_header(h: dict[str, Any], storage_: Storage) -> ChatHeader:
         bubble_count_hint=storage_.count_kv_by_prefix(f"bubbleId:{cid}:"),
         raw=h,
     )
+
+
+_ROLE_BY_TYPE: dict[int, str] = {1: "user", 2: "assistant"}
+
+
+def _parse_bubble(key: str, raw: dict[str, Any]) -> Bubble:
+    bubble_id = raw.get("bubbleId") or key.rsplit(":", 1)[-1]
+    role = _ROLE_BY_TYPE.get(raw.get("type"), "unknown")  # type: ignore[arg-type]
+    ts = raw.get("createdAt")
+    return Bubble(
+        bubble_id=str(bubble_id),
+        role=role,  # type: ignore[arg-type]
+        text=str(raw.get("text") or raw.get("richText") or ""),
+        created_at=datetime.fromtimestamp(ts / 1000) if ts else None,
+        raw=raw,
+    )
+
+
+def load_chat(storage_: Storage, composer_id: str) -> ChatDetail:
+    composer_data = storage_.read_kv(f"composerData:{composer_id}")
+    if composer_data is None:
+        raise KeyError(f"composerData not found for {composer_id}")
+    bubble_rows = storage_.read_kv_by_prefix(f"bubbleId:{composer_id}:")
+    bubbles = [_parse_bubble(k, v) for k, v in bubble_rows]
+    bubbles.sort(key=lambda b: b.created_at or datetime.min)
+
+    headers_data = storage_.read_headers()
+    header_raw = next(
+        (h for h in headers_data.get("allComposers", []) if h.get("composerId") == composer_id),
+        None,
+    )
+    if header_raw is None:
+        raise KeyError(f"header not found for {composer_id}")
+    header = _parse_header(header_raw, storage_)
+    return ChatDetail(header=header, bubbles=bubbles, composer_data_raw=composer_data)
 
 
 def list_chats(
