@@ -124,9 +124,16 @@ def _build_application(
     )
     layout = Layout(HSplit([breadcrumb_window, body, footer]))
 
+    from prompt_toolkit.filters import Condition
+
+    def _typing() -> bool:
+        return bool(getattr(nav.current, "wants_text_input", lambda: False)())
+
+    not_typing = Condition(lambda: not _typing())
+
     global_kb = KeyBindings()
 
-    @global_kb.add("q")
+    @global_kb.add("q", filter=not_typing)
     def _(event: Any) -> None:
         event.app.exit(result=0)
 
@@ -136,9 +143,12 @@ def _build_application(
 
     @global_kb.add("escape", eager=True)
     def _(event: Any) -> None:
+        handler = getattr(nav.current, "handle_escape", None)
+        if handler is not None and handler():
+            return
         nav.pop()
 
-    @global_kb.add("?")
+    @global_kb.add("?", filter=not_typing)
     def _(event: Any) -> None:
         from cursor_chat_tool.tui import dialogs
 

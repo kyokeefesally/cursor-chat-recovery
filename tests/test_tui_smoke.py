@@ -300,3 +300,82 @@ def test_messages_screen_scroll_bindings(minimal_db, workspace_storage_dir):
         assert k in keys, k
     styles = [s for s, _ in screen.render()]
     assert "[SetCursorPosition]" in styles
+
+
+def test_workspaces_filter_mode(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = WorkspacesScreen(state)
+    total = len(screen.visible)
+    assert total > 1
+    screen.filter.active = True
+    screen.filter.feed("alpha")
+    assert screen.filter_text == "alpha"
+    assert len(screen.visible) < total
+    # esc clears the filter and is consumed
+    assert screen.handle_escape() is True
+    assert screen.filter_text == ""
+    assert len(screen.visible) == total
+    # second esc is not consumed (lets the app pop the screen)
+    assert screen.handle_escape() is False
+
+
+def test_workspaces_filter_via_keys(minimal_db, workspace_storage_dir):
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    from cursor_chat_tool.tui import app as tui_app
+    with create_pipe_input() as inp:
+        inp.send_text("/alpha\r")  # filter to alpha, confirm
+        inp.send_text("\x1b")       # clear filter
+        inp.send_text("q")
+        rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
+                             workspace_storage=workspace_storage_dir,
+                             input=inp, output=DummyOutput())
+    assert rc == 0
+
+
+def test_filter_typing_q_does_not_quit(minimal_db, workspace_storage_dir):
+    """While the filter is active, the global q/? bindings must be disabled.
+
+    Verified at the unit level: the screen reports wants_text_input() while
+    active, which gates the global bindings in app._build_application.
+    """
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = WorkspacesScreen(state)
+    assert screen.wants_text_input() is False
+    screen.filter.active = True
+    assert screen.wants_text_input() is True
+
+
+def test_chats_select_all_and_clear(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool import operations, storage
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    with storage.Storage.open_readonly(minimal_db) as s:
+        ws = next(w for w in operations.list_workspaces(s, workspace_storage_dir)
+                  if w.identifier.id == "ws-alpha")
+    screen = ChatsScreen(state, ws)
+    screen.select_all()
+    assert len(screen.selected_ids) == len(screen.chats)
+    text = "".join(t for _, t in screen.render())
+    assert "selected" in text
+    screen.clear_selection()
+    assert not screen.selected_ids
+
+
+def test_workspaces_header_shows_sort(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = WorkspacesScreen(state)
+    text = "".join(t for _, t in screen.render())
+    assert "last_activity" in text or "last activity" in text

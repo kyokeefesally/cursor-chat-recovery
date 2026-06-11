@@ -4,12 +4,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
+from prompt_toolkit.filters import Condition
 from prompt_toolkit.key_binding import KeyBindings
 
 from cursor_chat_tool import operations
 from cursor_chat_tool.model import Workspace
 from cursor_chat_tool.storage import Storage
 from cursor_chat_tool.tui.app import AppState
+from cursor_chat_tool.tui.filtering import FilterState
 
 _SORT_KEYS = ("last_activity", "chat_count", "name", "health")
 
@@ -25,7 +27,7 @@ class WorkspacesScreen:
         self.state = state
         self.on_open = on_open
         self.cursor: int = 0
-        self.filter_text: str = ""
+        self.filter = FilterState()
         self.sort_key: str = "last_activity"
         self.workspaces: list[Workspace] = self._load()
 
@@ -36,6 +38,16 @@ class WorkspacesScreen:
                 self.state.workspace_storage,
                 self.state.workspaces_config,
             )
+
+    @property
+    def filter_text(self) -> str:
+        return self.filter.text
+
+    def handle_escape(self) -> bool:
+        return self.filter.handle_escape()
+
+    def wants_text_input(self) -> bool:
+        return self.filter.active
 
     # -- data view --------------------------------------------------------
 
@@ -70,7 +82,9 @@ class WorkspacesScreen:
         return "Workspaces"
 
     def footer_hints(self) -> str:
-        return "[enter] open  [s] sort  [↑/↓] move"
+        if self.filter.active:
+            return "type to filter  [enter] done  [esc] clear"
+        return "[enter] open  [s] sort  [/] filter  [↑/↓] move"
 
     def render(self) -> list[tuple[str, str]]:
         rows = self.visible
@@ -80,6 +94,13 @@ class WorkspacesScreen:
             self.cursor = 0
 
         fragments: list[tuple[str, str]] = []
+
+        status = f"sorted by: {self.sort_key}"
+        fstat = self.filter.status()
+        if fstat:
+            status += f"   {fstat} — {len(rows)}/{len(self.workspaces)} shown"
+        fragments.append(("class:header", " " + status + "\n"))
+
         header = f"   {'HEALTH':<14} {'CHATS':>6}  {'LAST ACTIVITY':<16}  NAME"
         fragments.append(("class:header", header + "\n"))
         fragments.append(("class:header", "  " + "─" * (len(header) + 20) + "\n"))
@@ -112,6 +133,9 @@ class WorkspacesScreen:
     def get_key_bindings(self) -> KeyBindings:
         kb = KeyBindings()
 
+        in_filter = Condition(lambda: self.filter.active)
+        not_in_filter = Condition(lambda: not self.filter.active)
+
         @kb.add("up")
         def _(event: Any) -> None:
             if self.cursor > 0:
@@ -138,16 +162,34 @@ class WorkspacesScreen:
         def _(event: Any) -> None:
             self.cursor = len(self.visible) - 1
 
-        @kb.add("s")
+        @kb.add("s", filter=not_in_filter)
         def _(event: Any) -> None:
             idx = _SORT_KEYS.index(self.sort_key)
             self.sort_key = _SORT_KEYS[(idx + 1) % len(_SORT_KEYS)]
             self.cursor = 0
 
-        @kb.add("enter")
+        @kb.add("enter", filter=not_in_filter)
         def _(event: Any) -> None:
             rows = self.visible
             if self.on_open is not None and 0 <= self.cursor < len(rows):
                 self.on_open(rows[self.cursor])
+
+        @kb.add("/", filter=not_in_filter)
+        def _(event: Any) -> None:
+            self.filter.active = True
+
+        @kb.add("<any>", filter=in_filter)
+        def _(event: Any) -> None:
+            if event.data:
+                self.filter.feed(event.data)
+                self.cursor = 0
+
+        @kb.add("backspace", filter=in_filter)
+        def _(event: Any) -> None:
+            self.filter.backspace()
+
+        @kb.add("enter", filter=in_filter)
+        def _(event: Any) -> None:
+            self.filter.active = False
 
         return kb

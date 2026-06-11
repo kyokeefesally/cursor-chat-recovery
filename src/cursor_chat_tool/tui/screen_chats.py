@@ -51,6 +51,8 @@ class ChatsScreen:
             self.cursor = 0
 
         fragments: list[tuple[str, str]] = []
+        if self.selected_ids:
+            fragments.append(("class:header", f" {len(self.selected_ids)} selected\n"))
         header = f"   {'DATE':<16}  {'NAME':<{_NAME_WIDTH}}  MSGS"
         fragments.append(("class:header", header + "\n"))
         fragments.append(("class:header", "  " + "─" * (len(header) + 4) + "\n"))
@@ -76,8 +78,14 @@ class ChatsScreen:
 
         return fragments
 
+    def select_all(self) -> None:
+        self.selected_ids = {c.composer_id for c in self.chats}
+
+    def clear_selection(self) -> None:
+        self.selected_ids = set()
+
     def footer_hints(self) -> str:
-        return "[enter] open  [space] select  [m] move  [e] export  [esc] back"
+        return "[enter] open  [space] select  [a] all  [A] none  [m] move  [e] export  [esc] back"
 
     def _ids_for_action(self) -> list[str]:
         if self.selected_ids:
@@ -141,5 +149,13 @@ class ChatsScreen:
             ids = self._ids_for_action()
             if self.on_export is not None and ids:
                 self.on_export(ids)
+
+        @kb.add("a")
+        def _(event: Any) -> None:
+            self.select_all()
+
+        @kb.add("A")
+        def _(event: Any) -> None:
+            self.clear_selection()
 
         return kb
