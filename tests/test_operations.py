@@ -176,3 +176,24 @@ def test_merge_workspaces_moves_all_chats(minimal_db, tmp_path):
     s2.close()
     assert alpha_count == 0
     assert beta_count == 3
+
+
+def test_list_chats_issues_constant_queries(minimal_db, workspace_storage_dir):
+    """Bubble counts must come from ONE grouped query, not one scan per chat."""
+    from cursor_chat_tool import operations, storage
+    with storage.Storage.open_readonly(minimal_db) as s:
+        calls: list[str] = []
+        real_execute = s._con.execute
+
+        def spy(sql, *a, **k):
+            calls.append(sql)
+            return real_execute(sql, *a, **k)
+
+        s._con.execute = spy  # type: ignore[method-assign]
+        chats = operations.list_chats(s, "ws-alpha")
+        assert len(chats) >= 2
+        kv_queries = [q for q in calls if "cursorDiskKV" in q]
+        assert len(kv_queries) == 1
+        # counts still correct
+        by_id = {c.composer_id: c.bubble_count_hint for c in chats}
+        assert by_id["c-alpha-1"] and by_id["c-alpha-1"] > 0

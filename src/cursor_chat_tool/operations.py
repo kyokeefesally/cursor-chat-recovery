@@ -160,7 +160,7 @@ def list_workspaces(
     return results
 
 
-def _parse_header(h: dict[str, Any], storage_: Storage) -> ChatHeader:
+def _parse_header(h: dict[str, Any], bubble_count: int | None) -> ChatHeader:
     cid = h["composerId"]
     created = _coerce_ts(h.get("createdAt")) or datetime.min
     last_dt = _coerce_ts(h.get("lastUpdatedAt"))
@@ -172,7 +172,7 @@ def _parse_header(h: dict[str, Any], storage_: Storage) -> ChatHeader:
         last_updated_at=last_dt,
         workspace_id=str(ws_id),
         subtitle=h.get("subtitle"),
-        bubble_count_hint=storage_.count_kv_by_prefix(f"bubbleId:{cid}:"),
+        bubble_count_hint=bubble_count,
         raw=h,
     )
 
@@ -207,7 +207,7 @@ def load_chat(storage_: Storage, composer_id: str) -> ChatDetail:
     )
     if header_raw is None:
         raise KeyError(f"header not found for {composer_id}")
-    header = _parse_header(header_raw, storage_)
+    header = _parse_header(header_raw, bubble_count=len(bubbles))
     return ChatDetail(header=header, bubbles=bubbles, composer_data_raw=composer_data)
 
 
@@ -224,7 +224,8 @@ def list_chats(
     matched.sort(key=lambda h: h.get("lastUpdatedAt") or h.get("createdAt", 0), reverse=True)
     if limit is not None:
         matched = matched[:limit]
-    return [_parse_header(h, storage_) for h in matched]
+    counts = storage_.count_kv_grouped("bubbleId:")
+    return [_parse_header(h, counts.get(h["composerId"], 0)) for h in matched]
 
 
 def export_chat(chat: ChatDetail, fmt: Literal["markdown", "json"] = "markdown") -> str:
