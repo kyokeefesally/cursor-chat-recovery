@@ -244,10 +244,7 @@ class ResultScreen:
 
 
 class ExportPathScreen:
-    """Confirms an output directory; ``enter`` submits, Esc cancels.
-
-    For v1 the path is not live-editable: ``enter`` submits ``default_dir``.
-    """
+    """Editable output directory; ``enter`` submits, Esc cancels."""
 
     def __init__(
         self,
@@ -255,35 +252,49 @@ class ExportPathScreen:
         default_dir: str,
         on_submit: Callable[[str], None],
     ) -> None:
-        from prompt_toolkit.buffer import Buffer
-
         self.state = state
-        self.default_dir = default_dir
+        self.text = default_dir
         self.on_submit = on_submit
-        self.buffer = Buffer()
-        self.buffer.text = default_dir
+
+    def feed(self, data: str) -> None:
+        if data.isprintable():
+            self.text += data
+
+    def backspace(self) -> None:
+        self.text = self.text[:-1]
 
     def title(self) -> str:
         return "Export"
 
-    def footer_hints(self) -> str:
-        return "[enter] save  [esc] cancel"
-
     def render(self) -> list[tuple[str, str]]:
         return [
-            (
-                "class:header",
-                "Export to directory (Enter to save, Esc to cancel):\n\n",
-            ),
-            ("class:row", "  " + self.buffer.text + "\n"),
+            ("class:header", "Export to directory:\n\n"),
+            ("class:row", "  " + self.text),
+            ("class:row-selected", " "),  # block cursor
+            ("class:row", "\n"),
         ]
+
+    def footer_hints(self) -> str:
+        return "type to edit  [enter] save  [esc] cancel"
+
+    def wants_text_input(self) -> bool:
+        return True  # disables the global q/? bindings while this screen is up
 
     def get_key_bindings(self) -> KeyBindings:
         kb = KeyBindings()
 
+        @kb.add("<any>")
+        def _(event: Any) -> None:
+            if event.data:
+                self.feed(event.data)
+
+        @kb.add("backspace")
+        def _(event: Any) -> None:
+            self.backspace()
+
         @kb.add("enter")
         def _(event: Any) -> None:
-            self.on_submit(self.default_dir)
+            self.on_submit(self.text)
 
         return kb
 

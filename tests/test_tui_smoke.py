@@ -501,3 +501,24 @@ def test_run_tui_sync_load_flag(minimal_db, workspace_storage_dir):
                              workspace_storage=workspace_storage_dir,
                              input=inp, output=DummyOutput(), sync_load=True)
     assert rc == 0
+
+
+def test_export_path_is_editable(minimal_db, workspace_storage_dir):
+    from prompt_toolkit.keys import Keys
+
+    from cursor_chat_tool.tui import dialogs
+    from cursor_chat_tool.tui.app import AppState
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    submitted: list[str] = []
+    screen = dialogs.ExportPathScreen(state, default_dir="C:/exports",
+                                      on_submit=submitted.append)
+    assert screen.wants_text_input() is True
+    screen.feed("2")   # append a char
+    screen.backspace()
+    screen.feed("x")
+    # NB: "enter" registers as Keys.ControlM, not the literal string "enter"
+    for b in screen.get_key_bindings().bindings:
+        if tuple(b.keys) == (Keys.ControlM,):
+            b.handler(None)  # type: ignore[arg-type]
+    assert submitted == ["C:/exportsx"]
