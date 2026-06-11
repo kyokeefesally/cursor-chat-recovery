@@ -158,15 +158,21 @@ def test_tui_reassign_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path)
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
+    from cursor_chat_tool import storage
     from cursor_chat_tool.tui import app as tui_app
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
+    with storage.Storage.open_readonly(work) as s:
+        headers_before = s.read_headers()
     with create_pipe_input() as inp:
-        inp.send_text("\r")    # into workspace -> chats
-        inp.send_text("r")     # reassign current chat -> pick target
-        inp.send_text("\r")    # pick first target
-        inp.send_text("y")     # confirm
-        inp.send_text("\x1b")  # close result
+        inp.send_text("\r")      # into workspace -> chats
+        inp.send_text("r")       # reassign current chat -> pick target
+        # Row 0 of the pick list is the source workspace, where enter is a
+        # deliberate no-op; move down to a real target first.
+        inp.send_text("\x1b[B")  # down arrow
+        inp.send_text("\r")      # pick the target
+        inp.send_text("y")       # confirm
+        inp.send_text("\x1b")    # close result
         inp.send_text("q")
         rc = tui_app.run_tui(readonly=False, global_db=work,
                              workspace_storage=workspace_storage_dir,
@@ -174,6 +180,10 @@ def test_tui_reassign_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path)
                              input=inp, output=DummyOutput(),
                              cursor_running_check=lambda: False)
     assert rc == 0
+    # The move must actually have happened, not just not-crashed.
+    with storage.Storage.open_readonly(work) as s:
+        headers_after = s.read_headers()
+    assert headers_after != headers_before
 
 
 def test_export_chats_writes_files(minimal_db, workspace_storage_dir, tmp_path):
