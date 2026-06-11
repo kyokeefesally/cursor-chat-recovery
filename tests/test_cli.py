@@ -1,9 +1,9 @@
-import json as _json
+﻿import json as _json
 import shutil
 
 
 def test_cli_list_json(minimal_db, workspace_storage_dir, monkeypatch, capsys):
-    from cursor_chat_tool import cli
+    from cursor_chat_recovery import cli
     rc = cli.main([
         "--list", "--json",
         "--global-db", str(minimal_db),
@@ -16,7 +16,7 @@ def test_cli_list_json(minimal_db, workspace_storage_dir, monkeypatch, capsys):
 
 
 def test_cli_export_to_stdout(minimal_db, workspace_storage_dir, capsys):
-    from cursor_chat_tool import cli
+    from cursor_chat_recovery import cli
     rc = cli.main([
         "--export", "c-alpha-1",
         "--format", "markdown",
@@ -31,7 +31,7 @@ def test_cli_export_to_stdout(minimal_db, workspace_storage_dir, capsys):
 def test_cli_reassign_requires_yes(minimal_db, workspace_storage_dir, tmp_path):
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
-    from cursor_chat_tool import cli
+    from cursor_chat_recovery import cli
     rc = cli.main([
         "--reassign", "c-alpha-1", "ws-beta",
         "--global-db", str(work),
@@ -44,7 +44,7 @@ def test_cli_reassign_with_yes(minimal_db, workspace_storage_dir, tmp_path):
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
     backup_dir = tmp_path / "backups"
-    from cursor_chat_tool import cli
+    from cursor_chat_recovery import cli
     rc = cli.main([
         "--reassign", "c-alpha-1", "ws-beta",
         "--yes",

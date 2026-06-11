@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cursor-chat-tool"
+name = "cursor-chat-recovery"
 version = "0.2.0"
 description = "Inventory, view, reassign, and export Cursor chats"
 readme = "README.md"
@@ -14,10 +14,11 @@ dependencies = [
 ]
 
 [project.scripts]
-cursor-chat-tool = "cursor_chat_tool.cli:main"
+cursor-chat-recovery = "cursor_chat_recovery.cli:main"
+ccr = "cursor_chat_recovery.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cursor_chat_tool"]
+packages = ["src/cursor_chat_recovery"]
 
 [dependency-groups]
 dev = [
@@ -41,4 +42,4 @@ select = ["E", "F", "I", "B", "UP"]
 [tool.mypy]
 python_version = "3.10"
 strict = true
-files = ["src/cursor_chat_tool"]
+files = ["src/cursor_chat_recovery"]

@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any, Protocol
 
-from cursor_chat_tool.model import SchemaReport
+from cursor_chat_recovery.model import SchemaReport
 
 SCHEMA_VERSION = "2026-05-a"
 
@@ -76,9 +76,9 @@ def detect_mismatch(con: _Queryable) -> SchemaReport:
 
 
 def agent_prompt(report: SchemaReport) -> str:
-    return f"""You are updating cursor-chat-tool to a new Cursor schema version.
+    return f"""You are updating cursor-chat-recovery to a new Cursor schema version.
 
-Current expected schema (cursor_chat_tool/schema.py):
+Current expected schema (cursor_chat_recovery/schema.py):
   SCHEMA_VERSION = "{report.schema_version}"
   ItemTable key "composer.composerHeaders" -> JSON {{allComposers: [Header, ...]}}
   Each Header must have: {sorted(EXPECTED_HEADER_REQUIRED)}

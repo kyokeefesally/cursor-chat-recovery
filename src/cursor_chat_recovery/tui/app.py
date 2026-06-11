@@ -24,7 +24,7 @@ from prompt_toolkit.layout import HSplit, Layout, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from prompt_toolkit.styles import Style
 
-from cursor_chat_tool import paths
+from cursor_chat_recovery import paths
 
 
 @dataclass
@@ -157,7 +157,7 @@ def _build_application(
 
     @global_kb.add("?", filter=not_typing)
     def _(event: Any) -> None:
-        from cursor_chat_tool.tui import dialogs
+        from cursor_chat_recovery.tui import dialogs
 
         if not isinstance(nav.current, dialogs.HelpScreen):
             nav.push(dialogs.HelpScreen(state))
@@ -204,15 +204,15 @@ def run_tui(
     )
 
     # Imported here to avoid a circular import (screen modules import from app).
-    from cursor_chat_tool import schema, storage
-    from cursor_chat_tool.tui import actions, dialogs
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery import schema, storage
+    from cursor_chat_recovery.tui import actions, dialogs
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
 
     check = cursor_running_check or storage._default_cursor_running_check
 
     def on_export(ids: list[str]) -> None:
         chats_depth = len(nav.stack)
-        default_dir = str(Path.home() / ".cursor-chat-tool" / "exports")
+        default_dir = str(Path.home() / ".cursor-chat-recovery" / "exports")
 
         def do_export(dir_str: str) -> None:
             while len(nav.stack) > chats_depth:
@@ -235,7 +235,7 @@ def run_tui(
         )
 
     def open_chat(chat_header: Any) -> None:
-        from cursor_chat_tool.tui.screen_messages import MessagesScreen
+        from cursor_chat_recovery.tui.screen_messages import MessagesScreen
 
         nav.push(
             MessagesScreen(
@@ -256,7 +256,7 @@ def run_tui(
             return
 
         with storage.Storage.open_readonly(state.global_db) as s:
-            from cursor_chat_tool import operations
+            from cursor_chat_recovery import operations
 
             workspaces = operations.list_workspaces(
                 s, state.workspace_storage, state.workspaces_config
@@ -268,7 +268,7 @@ def run_tui(
             nav.pop()  # remove the pick screen
 
             def on_yes() -> None:
-                backup_dir = Path.home() / ".cursor-chat-tool" / "backups"
+                backup_dir = Path.home() / ".cursor-chat-recovery" / "backups"
                 # Unwind back to the chats screen before showing the result.
                 while len(nav.stack) > chats_depth:
                     nav.pop()
@@ -314,7 +314,7 @@ def run_tui(
         ))
 
     def open_workspace(workspace: Any) -> None:
-        from cursor_chat_tool.tui.screen_chats import ChatsScreen
+        from cursor_chat_recovery.tui.screen_chats import ChatsScreen
 
         nav.push(
             ChatsScreen(

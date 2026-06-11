@@ -6,8 +6,8 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Literal, cast
 
-from cursor_chat_tool import operations, storage
-from cursor_chat_tool.model import ReassignResult
+from cursor_chat_recovery import operations, storage
+from cursor_chat_recovery.model import ReassignResult
 
 
 def perform_reassign(

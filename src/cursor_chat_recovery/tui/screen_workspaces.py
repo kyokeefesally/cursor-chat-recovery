@@ -7,12 +7,12 @@ from typing import Any
 from prompt_toolkit.filters import Condition
 from prompt_toolkit.key_binding import KeyBindings
 
-from cursor_chat_tool import operations
-from cursor_chat_tool.model import Workspace
-from cursor_chat_tool.storage import Storage
-from cursor_chat_tool.tui.app import AppState
-from cursor_chat_tool.tui.filtering import FilterState
-from cursor_chat_tool.tui.loading import spinner_frame, start_load
+from cursor_chat_recovery import operations
+from cursor_chat_recovery.model import Workspace
+from cursor_chat_recovery.storage import Storage
+from cursor_chat_recovery.tui.app import AppState
+from cursor_chat_recovery.tui.filtering import FilterState
+from cursor_chat_recovery.tui.loading import spinner_frame, start_load
 
 _SORT_KEYS = ("last_activity", "chat_count", "name", "health")
 

@@ -1,6 +1,6 @@
 """Dialog screens (pick-target, confirm, result, schema-mismatch).
 
-These implement the Screen protocol from :mod:`cursor_chat_tool.tui.app` so they
+These implement the Screen protocol from :mod:`cursor_chat_recovery.tui.app` so they
 can be pushed onto the navigation stack like any other screen. Escape pops the
 stack via the global binding, which doubles as "cancel".
 """
@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit.key_binding import KeyBindings
 
-from cursor_chat_tool.tui.filtering import FilterState
+from cursor_chat_recovery.tui.filtering import FilterState
 
 if TYPE_CHECKING:
-    from cursor_chat_tool.model import Workspace
-    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_recovery.model import Workspace
+    from cursor_chat_recovery.tui.app import AppState
 
 
 _PT_NAME_WIDTH = 28
@@ -210,7 +210,7 @@ class ConfirmScreen:
 
         @kb.add("n")
         def _(event: Any) -> None:
-            from cursor_chat_tool.tui.app import get_nav
+            from cursor_chat_recovery.tui.app import get_nav
 
             nav = get_nav()
             if nav is not None:

@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Literal
 
-from cursor_chat_tool.model import (
+from cursor_chat_recovery.model import (
     Bubble,
     ChatDetail,
     ChatHeader,
@@ -17,8 +17,8 @@ from cursor_chat_tool.model import (
     Workspace,
     WorkspaceIdentifier,
 )
-from cursor_chat_tool.paths import decode_ssh_remote_host
-from cursor_chat_tool.storage import Storage
+from cursor_chat_recovery.paths import decode_ssh_remote_host
+from cursor_chat_recovery.storage import Storage
 
 
 def _parse_workspace_identifier(raw: dict[str, Any]) -> WorkspaceIdentifier:

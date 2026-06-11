@@ -8,10 +8,10 @@ from collections.abc import Callable
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
-from cursor_chat_tool import operations, paths, schema, storage
+from cursor_chat_recovery import operations, paths, schema, storage
 
 try:
-    __version__ = version("cursor-chat-tool")
+    __version__ = version("cursor-chat-recovery")
 except PackageNotFoundError:  # running from source without install
     __version__ = "0.0.0+dev"
 
@@ -67,7 +67,7 @@ def _do_reassign(args: argparse.Namespace) -> int:
     global_db, _, _ = _resolve_paths(args)
     backup_dir = (
         Path(args.backup_dir) if args.backup_dir
-        else Path.home() / ".cursor-chat-tool" / "backups"
+        else Path.home() / ".cursor-chat-recovery" / "backups"
     )
     cursor_check: Callable[[], bool] = (
         (lambda: False) if args.no_cursor_check
@@ -91,7 +91,7 @@ def _do_merge(args: argparse.Namespace) -> int:
     global_db, _, _ = _resolve_paths(args)
     backup_dir = (
         Path(args.backup_dir) if args.backup_dir
-        else Path.home() / ".cursor-chat-tool" / "backups"
+        else Path.home() / ".cursor-chat-recovery" / "backups"
     )
     cursor_check: Callable[[], bool] = (
         (lambda: False) if args.no_cursor_check
@@ -112,7 +112,7 @@ def _do_merge(args: argparse.Namespace) -> int:
 
 
 def _do_tui(args: argparse.Namespace) -> int:
-    from cursor_chat_tool.tui.app import run_tui
+    from cursor_chat_recovery.tui.app import run_tui
     global_db, ws_dir, workspaces_dir = _resolve_paths(args)
     return run_tui(
         readonly=args.readonly,
@@ -123,7 +123,7 @@ def _do_tui(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(prog="cursor-chat-tool")
+    p = argparse.ArgumentParser(prog="cursor-chat-recovery")
     p.add_argument("--version", action="version", version=__version__)
     p.add_argument("--global-db")
     p.add_argument("--workspace-storage")

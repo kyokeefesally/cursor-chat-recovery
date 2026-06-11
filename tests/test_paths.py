@@ -1,6 +1,6 @@
-import pytest
+﻿import pytest
 
-from cursor_chat_tool import paths
+from cursor_chat_recovery import paths
 
 
 def test_decode_ssh_remote_host():

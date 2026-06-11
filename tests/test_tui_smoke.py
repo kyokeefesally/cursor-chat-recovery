@@ -1,7 +1,7 @@
-from prompt_toolkit.input import create_pipe_input
+﻿from prompt_toolkit.input import create_pipe_input
 from prompt_toolkit.output import DummyOutput
 
-from cursor_chat_tool.tui import app as tui_app
+from cursor_chat_recovery.tui import app as tui_app
 
 
 def test_tui_quits_on_q(minimal_db, workspace_storage_dir):
@@ -21,9 +21,9 @@ def test_tui_renders_workspaces_then_quits(minimal_db, workspace_storage_dir):
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
-    from cursor_chat_tool.tui.app import AppState, NavStack  # noqa: F401
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui import app as tui_app
+    from cursor_chat_recovery.tui.app import AppState, NavStack  # noqa: F401
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
 
     # Unit-level: the screen loads and renders real workspace rows
     state = AppState(readonly=True, global_db=minimal_db,
@@ -46,9 +46,9 @@ def test_tui_renders_workspaces_then_quits(minimal_db, workspace_storage_dir):
 
 
 def test_chats_screen_renders(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool import operations, storage
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    from cursor_chat_recovery import operations, storage
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_chats import ChatsScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     with storage.Storage.open_readonly(minimal_db) as s:
@@ -67,7 +67,7 @@ def test_tui_drill_into_workspace_and_back(minimal_db, workspace_storage_dir):
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery.tui import app as tui_app
     with create_pipe_input() as inp:
         inp.send_text("\r")    # Enter: drill into top workspace
         inp.send_text("\x1b")  # Esc: back to workspaces
@@ -79,8 +79,8 @@ def test_tui_drill_into_workspace_and_back(minimal_db, workspace_storage_dir):
 
 
 def test_messages_screen_renders(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_messages import MessagesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_messages import MessagesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = MessagesScreen(state, "c-alpha-1")
@@ -93,7 +93,7 @@ def test_tui_drill_to_messages_and_back(minimal_db, workspace_storage_dir):
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery.tui import app as tui_app
     with create_pipe_input() as inp:
         inp.send_text("\r")    # into workspace -> chats
         inp.send_text("\r")    # into chat -> messages
@@ -109,8 +109,8 @@ def test_tui_drill_to_messages_and_back(minimal_db, workspace_storage_dir):
 def test_perform_reassign_moves_chat(minimal_db, workspace_storage_dir, tmp_path):
     import shutil
 
-    from cursor_chat_tool import storage
-    from cursor_chat_tool.tui import actions
+    from cursor_chat_recovery import storage
+    from cursor_chat_recovery.tui import actions
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
     res = actions.perform_reassign(
@@ -124,9 +124,9 @@ def test_perform_reassign_moves_chat(minimal_db, workspace_storage_dir, tmp_path
 
 
 def test_dialog_screens_render(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool import operations, storage
-    from cursor_chat_tool.tui import dialogs
-    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_recovery import operations, storage
+    from cursor_chat_recovery.tui import dialogs
+    from cursor_chat_recovery.tui.app import AppState
     state = AppState(readonly=False, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     with storage.Storage.open_readonly(minimal_db) as s:
@@ -143,7 +143,7 @@ def test_schema_mismatch_makes_root_readonly(drift_db, workspace_storage_dir):
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery.tui import app as tui_app
     with create_pipe_input() as inp:
         inp.send_text("q")
         rc = tui_app.run_tui(readonly=False, global_db=drift_db,
@@ -158,8 +158,8 @@ def test_tui_reassign_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path)
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool import storage
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery import storage
+    from cursor_chat_recovery.tui import app as tui_app
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
     with storage.Storage.open_readonly(work) as s:
@@ -188,7 +188,7 @@ def test_tui_reassign_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path)
 
 
 def test_export_chats_writes_files(minimal_db, workspace_storage_dir, tmp_path):
-    from cursor_chat_tool.tui import actions
+    from cursor_chat_recovery.tui import actions
     out = tmp_path / "exports"
     paths = actions.export_chats(minimal_db, ["c-alpha-1"], out, fmt="markdown")
     assert len(paths) == 1
@@ -201,7 +201,7 @@ def test_export_chats_writes_files(minimal_db, workspace_storage_dir, tmp_path):
 def test_export_chats_json(minimal_db, workspace_storage_dir, tmp_path):
     import json
 
-    from cursor_chat_tool.tui import actions
+    from cursor_chat_recovery.tui import actions
     out = tmp_path / "exports"
     paths = actions.export_chats(minimal_db, ["c-alpha-1"], out, fmt="json")
     assert len(paths) == 1
@@ -210,10 +210,10 @@ def test_export_chats_json(minimal_db, workspace_storage_dir, tmp_path):
 
 
 def test_footer_hints_per_screen(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool import operations, storage
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_chats import ChatsScreen
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery import operations, storage
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_chats import ChatsScreen
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     ws_screen = WorkspacesScreen(state)
@@ -229,9 +229,9 @@ def test_footer_hints_per_screen(minimal_db, workspace_storage_dir):
 
 
 def test_move_key_m_triggers_reassign(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool import operations, storage
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    from cursor_chat_recovery import operations, storage
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_chats import ChatsScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     with storage.Storage.open_readonly(minimal_db) as s:
@@ -251,7 +251,7 @@ def test_tui_export_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path, m
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery.tui import app as tui_app
     with create_pipe_input() as inp:
         inp.send_text("\r")    # into workspace -> chats
         inp.send_text("e")     # export current chat -> export path screen
@@ -265,8 +265,8 @@ def test_tui_export_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path, m
 
 
 def test_help_screen_lists_keys(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui import dialogs
-    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_recovery.tui import dialogs
+    from cursor_chat_recovery.tui.app import AppState
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     help_screen = dialogs.HelpScreen(state)
@@ -279,7 +279,7 @@ def test_question_mark_opens_help(minimal_db, workspace_storage_dir):
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery.tui import app as tui_app
     with create_pipe_input() as inp:
         inp.send_text("?")
         inp.send_text("\x1b")  # close help
@@ -291,8 +291,8 @@ def test_question_mark_opens_help(minimal_db, workspace_storage_dir):
 
 
 def test_list_screens_emit_cursor_position(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = WorkspacesScreen(state)
@@ -301,8 +301,8 @@ def test_list_screens_emit_cursor_position(minimal_db, workspace_storage_dir):
 
 
 def test_messages_screen_scroll_bindings(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_messages import MessagesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_messages import MessagesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = MessagesScreen(state, "c-alpha-1")
@@ -314,8 +314,8 @@ def test_messages_screen_scroll_bindings(minimal_db, workspace_storage_dir):
 
 
 def test_workspaces_filter_mode(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = WorkspacesScreen(state)
@@ -337,7 +337,7 @@ def test_workspaces_filter_via_keys(minimal_db, workspace_storage_dir):
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery.tui import app as tui_app
     with create_pipe_input() as inp:
         inp.send_text("/alpha\r")  # filter to alpha, confirm
         inp.send_text("\x1b")       # clear filter
@@ -354,8 +354,8 @@ def test_filter_typing_q_does_not_quit(minimal_db, workspace_storage_dir):
     Verified at the unit level: the screen reports wants_text_input() while
     active, which gates the global bindings in app._build_application.
     """
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = WorkspacesScreen(state)
@@ -365,9 +365,9 @@ def test_filter_typing_q_does_not_quit(minimal_db, workspace_storage_dir):
 
 
 def test_chats_select_all_and_clear(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool import operations, storage
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    from cursor_chat_recovery import operations, storage
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_chats import ChatsScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     with storage.Storage.open_readonly(minimal_db) as s:
@@ -383,8 +383,8 @@ def test_chats_select_all_and_clear(minimal_db, workspace_storage_dir):
 
 
 def test_workspaces_header_shows_sort(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = WorkspacesScreen(state)
@@ -393,9 +393,9 @@ def test_workspaces_header_shows_sort(minimal_db, workspace_storage_dir):
 
 
 def _mk_pick(minimal_db, workspace_storage_dir, n_chats=2):
-    from cursor_chat_tool import operations, storage
-    from cursor_chat_tool.tui import dialogs
-    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_recovery import operations, storage
+    from cursor_chat_recovery.tui import dialogs
+    from cursor_chat_recovery.tui.app import AppState
     state = AppState(readonly=False, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     with storage.Storage.open_readonly(minimal_db) as s:
@@ -459,8 +459,8 @@ def test_pick_target_filter(minimal_db, workspace_storage_dir):
 
 def test_screens_load_sync_without_event_loop(minimal_db, workspace_storage_dir):
     """Direct construction outside an app must still load immediately."""
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = WorkspacesScreen(state)
@@ -469,8 +469,8 @@ def test_screens_load_sync_without_event_loop(minimal_db, workspace_storage_dir)
 
 
 def test_loading_render_shows_spinner(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = WorkspacesScreen(state)
@@ -480,8 +480,8 @@ def test_loading_render_shows_spinner(minimal_db, workspace_storage_dir):
 
 
 def test_load_error_renders_error(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     screen = WorkspacesScreen(state)
@@ -494,7 +494,7 @@ def test_run_tui_sync_load_flag(minimal_db, workspace_storage_dir):
     from prompt_toolkit.input import create_pipe_input
     from prompt_toolkit.output import DummyOutput
 
-    from cursor_chat_tool.tui import app as tui_app
+    from cursor_chat_recovery.tui import app as tui_app
     with create_pipe_input() as inp:
         inp.send_text("\r\r\x1b\x1bq")  # drill to messages and back, deterministic
         rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
@@ -506,8 +506,8 @@ def test_run_tui_sync_load_flag(minimal_db, workspace_storage_dir):
 def test_export_path_is_editable(minimal_db, workspace_storage_dir):
     from prompt_toolkit.keys import Keys
 
-    from cursor_chat_tool.tui import dialogs
-    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_recovery.tui import dialogs
+    from cursor_chat_recovery.tui.app import AppState
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     submitted: list[str] = []
@@ -525,9 +525,9 @@ def test_export_path_is_editable(minimal_db, workspace_storage_dir):
 
 
 def test_chats_reload_refreshes_rows_and_clears_selection(minimal_db, workspace_storage_dir):
-    from cursor_chat_tool import operations, storage
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    from cursor_chat_recovery import operations, storage
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_chats import ChatsScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     with storage.Storage.open_readonly(minimal_db) as s:
@@ -544,9 +544,9 @@ def test_chats_reload_refreshes_rows_and_clears_selection(minimal_db, workspace_
 
 def test_messages_screen_wraps_lines(minimal_db, workspace_storage_dir):
     """The body window wraps only on screens that opt in via wrap_lines."""
-    from cursor_chat_tool.tui.app import AppState
-    from cursor_chat_tool.tui.screen_messages import MessagesScreen
-    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    from cursor_chat_recovery.tui.app import AppState
+    from cursor_chat_recovery.tui.screen_messages import MessagesScreen
+    from cursor_chat_recovery.tui.screen_workspaces import WorkspacesScreen
     state = AppState(readonly=True, global_db=minimal_db,
                      workspace_storage=workspace_storage_dir, workspaces_config=None)
     assert MessagesScreen(state, "c-alpha-1").wrap_lines is True

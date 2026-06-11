@@ -1,9 +1,9 @@
-import json
+﻿import json
 import shutil
 
 import pytest
 
-from cursor_chat_tool import storage
+from cursor_chat_recovery import storage
 
 
 def test_open_readonly(minimal_db):
@@ -125,7 +125,7 @@ def test_wal_checkpoint_runs_outside_txn(minimal_db, tmp_path, monkeypatch):
 
 
 def test_read_kv_by_prefix_uses_range_not_like(minimal_db):
-    from cursor_chat_tool.storage import Storage
+    from cursor_chat_recovery.storage import Storage
     with Storage.open_readonly(minimal_db) as s:
         calls: list[str] = []
         real_execute = s._con.execute
@@ -141,7 +141,7 @@ def test_read_kv_by_prefix_uses_range_not_like(minimal_db):
 
 
 def test_count_kv_by_prefix_uses_range_not_like(minimal_db):
-    from cursor_chat_tool.storage import Storage
+    from cursor_chat_recovery.storage import Storage
     with Storage.open_readonly(minimal_db) as s:
         calls: list[str] = []
         real_execute = s._con.execute
@@ -157,7 +157,7 @@ def test_count_kv_by_prefix_uses_range_not_like(minimal_db):
 
 
 def test_count_kv_grouped(minimal_db):
-    from cursor_chat_tool.storage import Storage
+    from cursor_chat_recovery.storage import Storage
     with Storage.open_readonly(minimal_db) as s:
         counts = s.count_kv_grouped("bubbleId:")
         # Every per-chat count must agree with the single-prefix counter.

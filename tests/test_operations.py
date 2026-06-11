@@ -1,7 +1,7 @@
-from datetime import datetime
+﻿from datetime import datetime
 
-from cursor_chat_tool import operations, storage
-from cursor_chat_tool.model import WorkspaceIdentifier
+from cursor_chat_recovery import operations, storage
+from cursor_chat_recovery.model import WorkspaceIdentifier
 
 
 def test_coerce_ts_handles_int_str_iso_and_missing():
@@ -59,7 +59,7 @@ def test_list_workspaces_classifies_health(minimal_db, workspace_storage_dir):
 
 
 def test_list_chats_for_workspace_sorted_desc(minimal_db):
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     with storage.Storage.open_readonly(minimal_db) as s:
         chats = operations.list_chats(s, "ws-alpha")
     assert [c.composer_id for c in chats] == ["c-alpha-2", "c-alpha-1"]
@@ -68,14 +68,14 @@ def test_list_chats_for_workspace_sorted_desc(minimal_db):
 
 
 def test_list_chats_limit(minimal_db):
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     with storage.Storage.open_readonly(minimal_db) as s:
         chats = operations.list_chats(s, "ws-alpha", limit=1)
     assert len(chats) == 1
 
 
 def test_load_chat_parses_bubbles(minimal_db):
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     with storage.Storage.open_readonly(minimal_db) as s:
         chat = operations.load_chat(s, "c-alpha-1")
     assert chat.header.composer_id == "c-alpha-1"
@@ -86,7 +86,7 @@ def test_load_chat_parses_bubbles(minimal_db):
 
 
 def test_export_chat_markdown(minimal_db):
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     with storage.Storage.open_readonly(minimal_db) as s:
         chat = operations.load_chat(s, "c-alpha-1")
     out = operations.export_chat(chat, fmt="markdown")
@@ -98,7 +98,7 @@ def test_export_chat_markdown(minimal_db):
 def test_export_chat_json(minimal_db):
     import json as _json
 
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     with storage.Storage.open_readonly(minimal_db) as s:
         chat = operations.load_chat(s, "c-alpha-1")
     out = operations.export_chat(chat, fmt="json")
@@ -110,7 +110,7 @@ def test_export_chat_json(minimal_db):
 def test_reassign_chats_moves_headers(minimal_db, tmp_path):
     import shutil
 
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
     backup_dir = tmp_path / "backups"
@@ -132,7 +132,7 @@ def test_reassign_roundtrip_identity(minimal_db, tmp_path):
     import shutil
     from pathlib import Path
 
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
     backup_dir = tmp_path / "backups"
@@ -152,7 +152,7 @@ def test_reassign_roundtrip_identity(minimal_db, tmp_path):
 def test_merge_workspaces_moves_all_chats(minimal_db, tmp_path):
     import shutil
 
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
 
     work = tmp_path / "state.vscdb"
     shutil.copy(minimal_db, work)
@@ -180,7 +180,7 @@ def test_merge_workspaces_moves_all_chats(minimal_db, tmp_path):
 
 def test_list_chats_issues_constant_queries(minimal_db, workspace_storage_dir):
     """Bubble counts must come from ONE grouped query, not one scan per chat."""
-    from cursor_chat_tool import operations, storage
+    from cursor_chat_recovery import operations, storage
     with storage.Storage.open_readonly(minimal_db) as s:
         calls: list[str] = []
         real_execute = s._con.execute

@@ -6,11 +6,11 @@ from typing import Any
 
 from prompt_toolkit.key_binding import KeyBindings
 
-from cursor_chat_tool import operations
-from cursor_chat_tool.model import ChatHeader, Workspace
-from cursor_chat_tool.storage import Storage
-from cursor_chat_tool.tui.app import AppState
-from cursor_chat_tool.tui.loading import spinner_frame, start_load
+from cursor_chat_recovery import operations
+from cursor_chat_recovery.model import ChatHeader, Workspace
+from cursor_chat_recovery.storage import Storage
+from cursor_chat_recovery.tui.app import AppState
+from cursor_chat_recovery.tui.loading import spinner_frame, start_load
 
 _NAME_WIDTH = 40
 

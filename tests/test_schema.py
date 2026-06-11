@@ -1,6 +1,6 @@
-import sqlite3
+﻿import sqlite3
 
-from cursor_chat_tool import schema
+from cursor_chat_recovery import schema
 
 
 def _ro(db):
