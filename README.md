@@ -1,27 +1,35 @@
 # cursor-chat-recovery
 
-Interactive TUI to inventory, view, reassign, merge, and export Cursor AI chats.
+[![CI](https://github.com/kwiscion/cursor-chat-recovery/actions/workflows/ci.yml/badge.svg)](https://github.com/kwiscion/cursor-chat-recovery/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
-## Why
+Did your Cursor chats disappear after you moved, renamed, or re-opened a project? They're not gone. This is an interactive terminal UI to **recover, browse, move, and export Cursor AI chat history** — across all your projects.
 
-Cursor identifies each workspace by a hash of its identifier URI. Reopening a project from a different path, or saving an Untitled multi-folder workspace as a `.code-workspace` file, mints a new workspace identity and detaches all prior chats from the sidebar. The conversations are still in `globalStorage/state.vscdb` keyed by `composerId` — they just need their `workspaceIdentifier` rewritten to point at the new workspace.
+## Why chats "disappear"
+
+Cursor identifies each workspace by a hash of its identifier URI. Reopening a project from a different path, or saving an Untitled multi-folder workspace as a `.code-workspace` file, mints a new workspace identity and detaches all prior chats from the sidebar. The conversations are still in `globalStorage/state.vscdb` keyed by `composerId` — they just need their `workspaceIdentifier` rewritten to point at the new workspace. That's what this tool does, with backups at every step.
+
+It's also useful when nothing is broken: browse every chat you've ever had in any project, move chats between workspaces, and export conversations to Markdown.
 
 ## Install
 
-Not published to PyPI — install from a local checkout of this repo:
+Requires Python 3.10+. With [uv](https://docs.astral.sh/uv/):
 
-    git clone <repo-url> cursor-chat-recovery
-    cd cursor-chat-recovery
-    uv tool install .        # installs the `cursor-chat-recovery` executable to ~/.local/bin
-    # or, with pipx:
-    pipx install .
+    uv tool install git+https://github.com/kwiscion/cursor-chat-recovery
 
-To run without installing (from the repo dir): `uv run cursor-chat-recovery`.
+or with pipx:
+
+    pipx install git+https://github.com/kwiscion/cursor-chat-recovery
+
+Both install the `cursor-chat-recovery` executable (and a short alias, `ccr`).
 After `uv tool install`, ensure `~/.local/bin` is on your PATH (run `uv tool update-shell` once if needed).
+
+To run from a clone without installing: `uv run cursor-chat-recovery`.
 
 ## Use
 
-    cursor-chat-recovery                # interactive TUI
+    cursor-chat-recovery                # interactive TUI  (or: ccr)
     cursor-chat-recovery --readonly     # TUI with mutations disabled
     cursor-chat-recovery --list         # workspaces table to stdout
     cursor-chat-recovery --list --json
@@ -103,4 +111,4 @@ When Cursor changes its schema, the tool detects the mismatch on startup and sho
 
 ## License
 
-MIT
+[MIT](LICENSE)
