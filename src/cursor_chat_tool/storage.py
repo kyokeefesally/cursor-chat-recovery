@@ -13,6 +13,14 @@ from pathlib import Path
 from typing import Any
 
 
+def _prefix_range(prefix: str) -> tuple[str, str]:
+    """Inclusive/exclusive key range covering all keys starting with prefix.
+
+    Keys in cursorDiskKV are ASCII, so '￿' sorts after any suffix.
+    """
+    return prefix, prefix + "￿"
+
+
 class ReadOnlyViolation(Exception):
     """Raised when a write is attempted on a read-only Storage handle."""
 
@@ -133,19 +141,36 @@ class Storage:
         return json.loads(row[0])  # type: ignore[no-any-return]
 
     def read_kv_by_prefix(self, prefix: str) -> list[tuple[str, dict[str, Any]]]:
+        lo, hi = _prefix_range(prefix)
         rows = self._con.execute(
-            "SELECT key, value FROM cursorDiskKV WHERE key LIKE ?",
-            (prefix + "%",),
+            "SELECT key, value FROM cursorDiskKV WHERE key >= ? AND key < ?",
+            (lo, hi),
         ).fetchall()
         # Some rows carry NULL values in real Cursor DBs; skip those rather than crash.
         return [(str(k), json.loads(v)) for k, v in rows if v is not None]
 
     def count_kv_by_prefix(self, prefix: str) -> int:
+        lo, hi = _prefix_range(prefix)
         row = self._con.execute(
-            "SELECT COUNT(*) FROM cursorDiskKV WHERE key LIKE ?",
-            (prefix + "%",),
+            "SELECT COUNT(*) FROM cursorDiskKV WHERE key >= ? AND key < ?",
+            (lo, hi),
         ).fetchone()
         return int(row[0])
+
+    def count_kv_grouped(self, prefix: str) -> dict[str, int]:
+        """Count keys under prefix, grouped by the first ':'-delimited segment
+        after the prefix (e.g. composer id for 'bubbleId:'). One index-only scan."""
+        lo, hi = _prefix_range(prefix)
+        rows = self._con.execute(
+            "SELECT key FROM cursorDiskKV WHERE key >= ? AND key < ?",
+            (lo, hi),
+        ).fetchall()
+        counts: dict[str, int] = {}
+        plen = len(prefix)
+        for (key,) in rows:
+            group = str(key)[plen:].split(":", 1)[0]
+            counts[group] = counts.get(group, 0) + 1
+        return counts
 
     def write_headers(self, headers: dict[str, Any], op_label: str = "op") -> Path:
         if self._readonly:

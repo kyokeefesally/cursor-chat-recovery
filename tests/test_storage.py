@@ -122,3 +122,45 @@ def test_wal_checkpoint_runs_outside_txn(minimal_db, tmp_path, monkeypatch):
     s.write_headers({"allComposers": []}, op_label="checkpoint-test")
     s.close()
     assert calls.index("commit") < calls.index("checkpoint")
+
+
+def test_read_kv_by_prefix_uses_range_not_like(minimal_db):
+    from cursor_chat_tool.storage import Storage
+    with Storage.open_readonly(minimal_db) as s:
+        calls: list[str] = []
+        real_execute = s._con.execute
+
+        def spy(sql, *a, **k):
+            calls.append(sql)
+            return real_execute(sql, *a, **k)
+
+        s._con.execute = spy  # type: ignore[method-assign]
+        rows = s.read_kv_by_prefix("bubbleId:c-alpha-1:")
+        assert rows  # fixture has bubbles for c-alpha-1
+        assert all("LIKE" not in q.upper() for q in calls)
+
+
+def test_count_kv_by_prefix_uses_range_not_like(minimal_db):
+    from cursor_chat_tool.storage import Storage
+    with Storage.open_readonly(minimal_db) as s:
+        calls: list[str] = []
+        real_execute = s._con.execute
+
+        def spy(sql, *a, **k):
+            calls.append(sql)
+            return real_execute(sql, *a, **k)
+
+        s._con.execute = spy  # type: ignore[method-assign]
+        n = s.count_kv_by_prefix("bubbleId:c-alpha-1:")
+        assert n >= 1
+        assert all("LIKE" not in q.upper() for q in calls)
+
+
+def test_count_kv_grouped(minimal_db):
+    from cursor_chat_tool.storage import Storage
+    with Storage.open_readonly(minimal_db) as s:
+        counts = s.count_kv_grouped("bubbleId:")
+        # Every per-chat count must agree with the single-prefix counter.
+        assert counts
+        for cid, n in counts.items():
+            assert n == s.count_kv_by_prefix(f"bubbleId:{cid}:")
