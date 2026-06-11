@@ -379,3 +379,68 @@ def test_workspaces_header_shows_sort(minimal_db, workspace_storage_dir):
     screen = WorkspacesScreen(state)
     text = "".join(t for _, t in screen.render())
     assert "last_activity" in text or "last activity" in text
+
+
+def _mk_pick(minimal_db, workspace_storage_dir, n_chats=2):
+    from cursor_chat_tool import operations, storage
+    from cursor_chat_tool.tui import dialogs
+    from cursor_chat_tool.tui.app import AppState
+    state = AppState(readonly=False, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    with storage.Storage.open_readonly(minimal_db) as s:
+        wslist = operations.list_workspaces(s, workspace_storage_dir)
+    source = next(w for w in wslist if w.identifier.id == "ws-alpha")
+    picked: list = []
+    screen = dialogs.PickTargetScreen(
+        state, wslist, on_pick=picked.append,
+        source=source, chat_count=n_chats,
+    )
+    return screen, wslist, source, picked
+
+
+def test_pick_target_shows_paths_and_source(minimal_db, workspace_storage_dir):
+    screen, wslist, source, _ = _mk_pick(minimal_db, workspace_storage_dir)
+    text = "".join(t for _, t in screen.render())
+    # identifies targets by path like the workspaces screen
+    with_uri = next(w for w in wslist if w.identifier.uri and w.identifier.id != "ws-alpha")
+    uri = with_uri.identifier.uri
+    assert uri is not None and uri[-20:] in text
+    # header explains the move
+    assert "Move 2 chat(s)" in text
+    assert source.display_name in text
+    # the source row is marked
+    assert "(current)" in text
+
+
+def test_pick_target_skips_source_on_enter(minimal_db, workspace_storage_dir):
+    from prompt_toolkit.keys import Keys
+    screen, wslist, source, picked = _mk_pick(minimal_db, workspace_storage_dir)
+    rows = screen.visible
+    screen.cursor = next(i for i, w in enumerate(rows)
+                         if w.identifier.id == source.identifier.id)
+    # NB: "enter" registers as Keys.ControlM, not the literal string "enter"
+    for b in screen.get_key_bindings().bindings:
+        if tuple(b.keys) == (Keys.ControlM,):
+            b.handler(None)  # type: ignore[arg-type]
+    assert picked == []
+
+
+def test_pick_target_picks_non_source(minimal_db, workspace_storage_dir):
+    from prompt_toolkit.keys import Keys
+    screen, wslist, source, picked = _mk_pick(minimal_db, workspace_storage_dir)
+    rows = screen.visible
+    screen.cursor = next(i for i, w in enumerate(rows)
+                         if w.identifier.id != source.identifier.id)
+    for b in screen.get_key_bindings().bindings:
+        if tuple(b.keys) == (Keys.ControlM,) and b.filter():
+            b.handler(None)  # type: ignore[arg-type]
+    assert len(picked) == 1
+    assert picked[0].identifier.id != source.identifier.id
+
+
+def test_pick_target_filter(minimal_db, workspace_storage_dir):
+    screen, wslist, _, _ = _mk_pick(minimal_db, workspace_storage_dir)
+    total = len(screen.visible)
+    screen.filter.active = True
+    screen.filter.feed("beta")
+    assert 0 < len(screen.visible) < total

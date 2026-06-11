@@ -91,6 +91,7 @@ _STYLE = Style.from_dict({
     "header": "bold",
     "row": "",
     "row-selected": "reverse",
+    "row-dim": "#666666",
     "role-user": "bold #5fafff",
     "role-assistant": "bold #5fd75f",
     "role-system": "bold #aaaaaa",
@@ -294,7 +295,10 @@ def run_tui(
                 )
             )
 
-        nav.push(dialogs.PickTargetScreen(state, workspaces, on_pick=on_pick))
+        nav.push(dialogs.PickTargetScreen(
+            state, workspaces, on_pick=on_pick,
+            source=source_ws, chat_count=len(ids),
+        ))
 
     def open_workspace(workspace: Any) -> None:
         from cursor_chat_tool.tui.screen_chats import ChatsScreen

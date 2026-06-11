@@ -11,55 +11,135 @@ from typing import TYPE_CHECKING, Any
 
 from prompt_toolkit.key_binding import KeyBindings
 
+from cursor_chat_tool.tui.filtering import FilterState
+
 if TYPE_CHECKING:
     from cursor_chat_tool.model import Workspace
     from cursor_chat_tool.tui.app import AppState
 
 
+_PT_NAME_WIDTH = 28
+
+
 class PickTargetScreen:
-    """Lists workspaces; ``enter`` invokes ``on_pick`` with the selection."""
+    """Pick a move target. Identifies workspaces by name + path + activity,
+    mirroring the workspaces screen, so ambiguous names are distinguishable."""
 
     def __init__(
         self,
         state: AppState,
         workspaces: list[Workspace],
         on_pick: Callable[[Workspace], None],
+        source: Workspace | None = None,
+        chat_count: int = 1,
     ) -> None:
         self.state = state
         self.workspaces = workspaces
         self.on_pick = on_pick
+        self.source = source
+        self.chat_count = chat_count
         self.cursor: int = 0
+        self.filter = FilterState()
+
+    @property
+    def visible(self) -> list[Workspace]:
+        items = self.workspaces
+        needle = self.filter.text.lower()
+        if needle:
+            items = [
+                w for w in items
+                if needle in w.display_name.lower()
+                or needle in (w.identifier.uri or "").lower()
+            ]
+        return items
+
+    def _is_source(self, w: Workspace) -> bool:
+        return self.source is not None and w.identifier.id == self.source.identifier.id
 
     def title(self) -> str:
-        return "Pick target"
-
-    def footer_hints(self) -> str:
-        return "[enter] choose  [esc] cancel"
+        return "Move to"
 
     def render(self) -> list[tuple[str, str]]:
-        rows = self.workspaces
+        rows = self.visible
         if rows and self.cursor >= len(rows):
             self.cursor = len(rows) - 1
         if self.cursor < 0:
             self.cursor = 0
 
+        src = f' from "{self.source.display_name}"' if self.source else ""
         fragments: list[tuple[str, str]] = [
-            ("class:header", "Select a target workspace:\n\n")
+            ("class:header", f"Move {self.chat_count} chat(s){src} to:\n")
         ]
+        fstat = self.filter.status()
+        if fstat:
+            fragments.append(
+                ("class:header",
+                 f" {fstat} — {len(rows)}/{len(self.workspaces)} shown\n")
+            )
+        header = f"   {'NAME':<{_PT_NAME_WIDTH}}  {'CHATS':>5}  {'LAST ACTIVITY':<16}  PATH"
+        fragments.append(("class:header", header + "\n"))
+
         if not rows:
-            fragments.append(("class:row", "  (no workspaces)\n"))
+            fragments.append(("class:row", "  (no matching workspaces)\n"))
             return fragments
+
         for i, w in enumerate(rows):
             marker = "> " if i == self.cursor else "  "
-            line = f"{marker}{w.display_name}  ({w.identifier.id})"
-            cls = "class:row-selected" if i == self.cursor else "class:row"
+            name = w.display_name
+            if self._is_source(w):
+                name += " (current)"
+            if len(name) > _PT_NAME_WIDTH:
+                name = name[: _PT_NAME_WIDTH - 1] + "…"
+            last = w.last_chat_at.strftime("%Y-%m-%d %H:%M") if w.last_chat_at else "-"
+            uri = w.identifier.uri or f"[{w.identifier.id}]"
+            if len(uri) > 60:
+                uri = "…" + uri[-59:]
+            line = (
+                f"{marker}{name:<{_PT_NAME_WIDTH}}  {w.chat_count:>5}  {last:<16}  {uri}"
+            )
             if i == self.cursor:
                 fragments.append(("[SetCursorPosition]", ""))
+            cls = "class:row-selected" if i == self.cursor else (
+                "class:row-dim" if self._is_source(w) else "class:row"
+            )
             fragments.append((cls, line + "\n"))
         return fragments
 
+    def footer_hints(self) -> str:
+        if self.filter.active:
+            return "type to filter  [enter] done  [esc] clear"
+        return "[enter] choose  [/] filter  [esc] cancel"
+
+    def handle_escape(self) -> bool:
+        return self.filter.handle_escape()
+
+    def wants_text_input(self) -> bool:
+        return self.filter.active
+
     def get_key_bindings(self) -> KeyBindings:
+        from prompt_toolkit.filters import Condition
+
         kb = KeyBindings()
+        in_filter = Condition(lambda: self.filter.active)
+        not_in_filter = Condition(lambda: not self.filter.active)
+
+        @kb.add("<any>", filter=in_filter)
+        def _(event: Any) -> None:
+            if event.data:
+                self.filter.feed(event.data)
+                self.cursor = 0
+
+        @kb.add("backspace", filter=in_filter)
+        def _(event: Any) -> None:
+            self.filter.backspace()
+
+        @kb.add("enter", filter=in_filter)
+        def _(event: Any) -> None:
+            self.filter.active = False
+
+        @kb.add("/", filter=not_in_filter)
+        def _(event: Any) -> None:
+            self.filter.active = True
 
         @kb.add("up")
         def _(event: Any) -> None:
@@ -68,7 +148,7 @@ class PickTargetScreen:
 
         @kb.add("down")
         def _(event: Any) -> None:
-            if self.cursor < len(self.workspaces) - 1:
+            if self.cursor < len(self.visible) - 1:
                 self.cursor += 1
 
         @kb.add("pageup")
@@ -77,7 +157,7 @@ class PickTargetScreen:
 
         @kb.add("pagedown")
         def _(event: Any) -> None:
-            self.cursor = min(len(self.workspaces) - 1, self.cursor + 10)
+            self.cursor = min(len(self.visible) - 1, self.cursor + 10)
 
         @kb.add("home")
         def _(event: Any) -> None:
@@ -85,12 +165,13 @@ class PickTargetScreen:
 
         @kb.add("end")
         def _(event: Any) -> None:
-            self.cursor = len(self.workspaces) - 1
+            self.cursor = len(self.visible) - 1
 
-        @kb.add("enter")
+        @kb.add("enter", filter=not_in_filter)
         def _(event: Any) -> None:
-            if 0 <= self.cursor < len(self.workspaces):
-                self.on_pick(self.workspaces[self.cursor])
+            rows = self.visible
+            if 0 <= self.cursor < len(rows) and not self._is_source(rows[self.cursor]):
+                self.on_pick(rows[self.cursor])
 
         return kb
 
