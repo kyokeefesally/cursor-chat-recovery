@@ -22,7 +22,7 @@ class ChatsScreen:
         state: AppState,
         workspace: Workspace,
         on_open: Callable[[ChatHeader], None] | None = None,
-        on_reassign: Callable[[list[str]], None] | None = None,
+        on_reassign: Callable[[list[str], Workspace], None] | None = None,
         on_export: Callable[[list[str]], None] | None = None,
     ) -> None:
         self.state = state
@@ -74,6 +74,9 @@ class ChatsScreen:
 
         return fragments
 
+    def footer_hints(self) -> str:
+        return "[enter] open  [space] select  [m] move  [e] export  [esc] back"
+
     def _ids_for_action(self) -> list[str]:
         if self.selected_ids:
             return sorted(self.selected_ids)
@@ -108,11 +111,12 @@ class ChatsScreen:
             if self.on_open is not None and 0 <= self.cursor < len(self.chats):
                 self.on_open(self.chats[self.cursor])
 
+        @kb.add("m")
         @kb.add("r")
         def _(event: Any) -> None:
             ids = self._ids_for_action()
             if self.on_reassign is not None and ids:
-                self.on_reassign(ids)
+                self.on_reassign(ids, self.workspace)
 
         @kb.add("e")
         def _(event: Any) -> None:

@@ -198,6 +198,42 @@ def test_export_chats_json(minimal_db, workspace_storage_dir, tmp_path):
     assert data["composer_id"] == "c-alpha-1"
 
 
+def test_footer_hints_per_screen(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool import operations, storage
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    ws_screen = WorkspacesScreen(state)
+    assert "[enter] open" in ws_screen.footer_hints()
+    with storage.Storage.open_readonly(minimal_db) as s:
+        ws = next(w for w in operations.list_workspaces(s, workspace_storage_dir)
+                  if w.identifier.id == "ws-alpha")
+    chats = ChatsScreen(state, ws)
+    hints = chats.footer_hints()
+    assert "[m] move" in hints
+    assert "[space] select" in hints
+    assert "[e] export" in hints
+
+
+def test_move_key_m_triggers_reassign(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool import operations, storage
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    with storage.Storage.open_readonly(minimal_db) as s:
+        ws = next(w for w in operations.list_workspaces(s, workspace_storage_dir)
+                  if w.identifier.id == "ws-alpha")
+    calls: list[list[str]] = []
+    screen = ChatsScreen(state, ws, on_reassign=lambda ids, src: calls.append(ids))
+    kb = screen.get_key_bindings()
+    keys = {tuple(b.keys) for b in kb.bindings}
+    assert ("m",) in keys
+    assert ("r",) in keys  # legacy alias kept
+
+
 def test_tui_export_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path, monkeypatch):
     import pathlib
     monkeypatch.setattr(pathlib.Path, "home", classmethod(lambda cls: tmp_path))

@@ -45,6 +45,9 @@ class MessagesScreen:
             or self.chat.header.composer_id
         )
 
+    def footer_hints(self) -> str:
+        return "[e] export  [esc] back"
+
     def render(self) -> list[tuple[str, str]]:
         fragments: list[tuple[str, str]] = []
         if not self.chat.bubbles:

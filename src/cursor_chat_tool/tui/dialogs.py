@@ -33,6 +33,9 @@ class PickTargetScreen:
     def title(self) -> str:
         return "Pick target"
 
+    def footer_hints(self) -> str:
+        return "[enter] choose  [esc] cancel"
+
     def render(self) -> list[tuple[str, str]]:
         rows = self.workspaces
         if rows and self.cursor >= len(rows):
@@ -90,6 +93,9 @@ class ConfirmScreen:
     def title(self) -> str:
         return "Confirm"
 
+    def footer_hints(self) -> str:
+        return "[y] yes  [n]/[esc] no"
+
     def render(self) -> list[tuple[str, str]]:
         return [
             ("class:row", self.message + "\n\n"),
@@ -123,6 +129,9 @@ class ResultScreen:
 
     def title(self) -> str:
         return "Result"
+
+    def footer_hints(self) -> str:
+        return "[esc] close"
 
     def render(self) -> list[tuple[str, str]]:
         fragments: list[tuple[str, str]] = [
@@ -158,6 +167,9 @@ class ExportPathScreen:
     def title(self) -> str:
         return "Export"
 
+    def footer_hints(self) -> str:
+        return "[enter] save  [esc] cancel"
+
     def render(self) -> list[tuple[str, str]]:
         return [
             (
@@ -186,6 +198,9 @@ class SchemaMismatchScreen:
 
     def title(self) -> str:
         return "Schema mismatch"
+
+    def footer_hints(self) -> str:
+        return "[q] quit"
 
     def render(self) -> list[tuple[str, str]]:
         return [

@@ -51,6 +51,10 @@ class Screen(Protocol):
         """Screen-specific key bindings."""
         ...
 
+    def footer_hints(self) -> str:
+        """Key-hint line for the footer, e.g. '[enter] open  [s] sort'."""
+        ...
+
 
 class NavStack:
     """Holds the stack of screens; the top is the active screen."""
@@ -112,7 +116,7 @@ def _build_application(
     body = Window(content=FormattedTextControl(lambda: nav.current.render()))
     footer = Window(
         content=FormattedTextControl(
-            lambda: [("class:footer", " [q] quit  [esc] back  [↑/↓] move  [s] sort ")]
+            lambda: [("class:footer", f" {nav.current.footer_hints()}  [?] help  [q] quit ")]
         ),
         height=1,
     )
@@ -213,7 +217,7 @@ def run_tui(
             )
         )
 
-    def on_reassign(ids: list[str]) -> None:
+    def on_reassign(ids: list[str], source_ws: Any) -> None:
         if state.readonly:
             nav.push(
                 dialogs.ResultScreen(
@@ -248,28 +252,25 @@ def run_tui(
                         cursor_running_check=check,
                     )
                 except storage.CursorRunning as e:
-                    nav.push(
-                        dialogs.ResultScreen(
-                            state, [f"Reassign failed: {e}"]
-                        )
-                    )
+                    nav.push(dialogs.ResultScreen(state, [f"Move failed: {e}"]))
                     return
                 nav.push(
                     dialogs.ResultScreen(
                         state,
                         [
-                            f"Reassigned {len(res.composer_ids)} chat(s) "
+                            f"Moved {len(res.composer_ids)} chat(s) "
                             f"to {target_ws.display_name}.",
                             f"Backup: {res.backup_path}",
                         ],
                     )
                 )
 
+            target_path = target_ws.identifier.uri or target_ws.identifier.id
             nav.push(
                 dialogs.ConfirmScreen(
                     state,
-                    f"Reassign {len(ids)} chat(s) to "
-                    f"{target_ws.display_name}? A backup will be written.",
+                    f'Move {len(ids)} chat(s) to "{target_ws.display_name}" '
+                    f"({target_path})?\nA backup will be written.",
                     on_yes=on_yes,
                 )
             )

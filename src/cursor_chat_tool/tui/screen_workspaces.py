@@ -69,6 +69,9 @@ class WorkspacesScreen:
     def title(self) -> str:
         return "Workspaces"
 
+    def footer_hints(self) -> str:
+        return "[enter] open  [s] sort  [↑/↓] move"
+
     def render(self) -> list[tuple[str, str]]:
         rows = self.visible
         if rows and self.cursor >= len(rows):
