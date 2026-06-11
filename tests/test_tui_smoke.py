@@ -74,7 +74,7 @@ def test_tui_drill_into_workspace_and_back(minimal_db, workspace_storage_dir):
         inp.send_text("q")     # quit
         rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
                              workspace_storage=workspace_storage_dir,
-                             input=inp, output=DummyOutput())
+                             input=inp, output=DummyOutput(), sync_load=True)
     assert rc == 0
 
 
@@ -102,7 +102,7 @@ def test_tui_drill_to_messages_and_back(minimal_db, workspace_storage_dir):
         inp.send_text("q")
         rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
                              workspace_storage=workspace_storage_dir,
-                             input=inp, output=DummyOutput())
+                             input=inp, output=DummyOutput(), sync_load=True)
     assert rc == 0
 
 
@@ -178,7 +178,8 @@ def test_tui_reassign_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path)
                              workspace_storage=workspace_storage_dir,
                              workspaces_config=None,
                              input=inp, output=DummyOutput(),
-                             cursor_running_check=lambda: False)
+                             cursor_running_check=lambda: False,
+                             sync_load=True)
     assert rc == 0
     # The move must actually have happened, not just not-crashed.
     with storage.Storage.open_readonly(work) as s:
@@ -259,7 +260,7 @@ def test_tui_export_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path, m
         inp.send_text("q")
         rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
                              workspace_storage=workspace_storage_dir,
-                             input=inp, output=DummyOutput())
+                             input=inp, output=DummyOutput(), sync_load=True)
     assert rc == 0
 
 
@@ -285,7 +286,7 @@ def test_question_mark_opens_help(minimal_db, workspace_storage_dir):
         inp.send_text("q")
         rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
                              workspace_storage=workspace_storage_dir,
-                             input=inp, output=DummyOutput())
+                             input=inp, output=DummyOutput(), sync_load=True)
     assert rc == 0
 
 
@@ -343,7 +344,7 @@ def test_workspaces_filter_via_keys(minimal_db, workspace_storage_dir):
         inp.send_text("q")
         rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
                              workspace_storage=workspace_storage_dir,
-                             input=inp, output=DummyOutput())
+                             input=inp, output=DummyOutput(), sync_load=True)
     assert rc == 0
 
 
@@ -454,3 +455,49 @@ def test_pick_target_filter(minimal_db, workspace_storage_dir):
     screen.filter.active = True
     screen.filter.feed("beta")
     assert 0 < len(screen.visible) < total
+
+
+def test_screens_load_sync_without_event_loop(minimal_db, workspace_storage_dir):
+    """Direct construction outside an app must still load immediately."""
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = WorkspacesScreen(state)
+    assert screen.workspaces  # loaded synchronously
+    assert screen.loading is False
+
+
+def test_loading_render_shows_spinner(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = WorkspacesScreen(state)
+    screen.loading = True
+    text = "".join(t for _, t in screen.render())
+    assert "Loading" in text
+
+
+def test_load_error_renders_error(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = WorkspacesScreen(state)
+    screen.error = "boom"
+    text = "".join(t for _, t in screen.render())
+    assert "boom" in text
+
+
+def test_run_tui_sync_load_flag(minimal_db, workspace_storage_dir):
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    from cursor_chat_tool.tui import app as tui_app
+    with create_pipe_input() as inp:
+        inp.send_text("\r\r\x1b\x1bq")  # drill to messages and back, deterministic
+        rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
+                             workspace_storage=workspace_storage_dir,
+                             input=inp, output=DummyOutput(), sync_load=True)
+    assert rc == 0

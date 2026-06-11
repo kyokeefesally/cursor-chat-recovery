@@ -10,6 +10,7 @@ from cursor_chat_tool import operations
 from cursor_chat_tool.model import ChatDetail
 from cursor_chat_tool.storage import Storage
 from cursor_chat_tool.tui.app import AppState
+from cursor_chat_tool.tui.loading import spinner_frame, start_load
 
 _ROLE_STYLE = {
     "user": "class:role-user",
@@ -33,24 +34,40 @@ class MessagesScreen:
         self.composer_id = composer_id
         self.chat_name = chat_name
         self.on_export = on_export
-        with Storage.open_readonly(state.global_db) as s:
-            self.chat: ChatDetail = operations.load_chat(s, composer_id)
+        self.chat: ChatDetail | None = None
+        self.loading: bool = True
+        self.error: str | None = None
         self.scroll_line: int = 0
         self._line_cache: list[tuple[str, str]] | None = None
+        start_load(state.sync_load, self._load_chat, self._on_loaded, self._on_error)
+
+    def _load_chat(self) -> ChatDetail:
+        with Storage.open_readonly(self.state.global_db) as s:
+            return operations.load_chat(s, self.composer_id)
+
+    def _on_loaded(self, chat: ChatDetail) -> None:
+        self.chat = chat
+        self.loading = False
+
+    def _on_error(self, msg: str) -> None:
+        self.error = msg
+        self.loading = False
 
     # -- Screen protocol --------------------------------------------------
 
     def title(self) -> str:
-        return (
-            self.chat_name
-            or self.chat.header.name
-            or self.chat.header.composer_id
-        )
+        if self.chat_name:
+            return self.chat_name
+        if self.chat is not None and self.chat.header.name:
+            return self.chat.header.name
+        return self.composer_id
 
     def footer_hints(self) -> str:
         return "[e] export  [↑/↓ pgup/pgdn] scroll  [esc] back"
 
     def _lines(self) -> list[tuple[str, str]]:
+        if self.chat is None:
+            return [("class:row", "  (no messages)\n")]
         if self._line_cache is not None:
             return self._line_cache
         fragments: list[tuple[str, str]] = []
@@ -70,6 +87,10 @@ class MessagesScreen:
         return fragments
 
     def render(self) -> list[tuple[str, str]]:
+        if self.error:
+            return [("class:row", f"  Error: {self.error}\n")]
+        if self.loading:
+            return [("class:row", f"  {spinner_frame()} Loading…\n")]
         lines = self._lines()
         self.scroll_line = max(0, min(self.scroll_line, len(lines) - 1))
         out: list[tuple[str, str]] = []
@@ -109,6 +130,6 @@ class MessagesScreen:
         @kb.add("e")
         def _(event: Any) -> None:
             if self.on_export is not None:
-                self.on_export([self.chat.header.composer_id])
+                self.on_export([self.composer_id])
 
         return kb

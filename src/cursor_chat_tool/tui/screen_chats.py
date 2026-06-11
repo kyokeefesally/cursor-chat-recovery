@@ -10,6 +10,7 @@ from cursor_chat_tool import operations
 from cursor_chat_tool.model import ChatHeader, Workspace
 from cursor_chat_tool.storage import Storage
 from cursor_chat_tool.tui.app import AppState
+from cursor_chat_tool.tui.loading import spinner_frame, start_load
 
 _NAME_WIDTH = 40
 
@@ -32,11 +33,22 @@ class ChatsScreen:
         self.on_export = on_export
         self.cursor: int = 0
         self.selected_ids: set[str] = set()
-        self.chats: list[ChatHeader] = self._load()
+        self.chats: list[ChatHeader] = []
+        self.loading: bool = True
+        self.error: str | None = None
+        start_load(state.sync_load, self._load, self._on_loaded, self._on_error)
 
     def _load(self) -> list[ChatHeader]:
         with Storage.open_readonly(self.state.global_db) as storage_:
             return operations.list_chats(storage_, self.workspace.identifier.id)
+
+    def _on_loaded(self, rows: list[ChatHeader]) -> None:
+        self.chats = rows
+        self.loading = False
+
+    def _on_error(self, msg: str) -> None:
+        self.error = msg
+        self.loading = False
 
     # -- Screen protocol --------------------------------------------------
 
@@ -44,6 +56,10 @@ class ChatsScreen:
         return self.workspace.display_name
 
     def render(self) -> list[tuple[str, str]]:
+        if self.error:
+            return [("class:row", f"  Error: {self.error}\n")]
+        if self.loading:
+            return [("class:row", f"  {spinner_frame()} Loading…\n")]
         rows = self.chats
         if rows and self.cursor >= len(rows):
             self.cursor = len(rows) - 1

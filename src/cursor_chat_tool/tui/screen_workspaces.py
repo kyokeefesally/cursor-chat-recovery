@@ -12,6 +12,7 @@ from cursor_chat_tool.model import Workspace
 from cursor_chat_tool.storage import Storage
 from cursor_chat_tool.tui.app import AppState
 from cursor_chat_tool.tui.filtering import FilterState
+from cursor_chat_tool.tui.loading import spinner_frame, start_load
 
 _SORT_KEYS = ("last_activity", "chat_count", "name", "health")
 
@@ -29,7 +30,18 @@ class WorkspacesScreen:
         self.cursor: int = 0
         self.filter = FilterState()
         self.sort_key: str = "last_activity"
-        self.workspaces: list[Workspace] = self._load()
+        self.workspaces: list[Workspace] = []
+        self.loading: bool = True
+        self.error: str | None = None
+        start_load(state.sync_load, self._load, self._on_loaded, self._on_error)
+
+    def _on_loaded(self, rows: list[Workspace]) -> None:
+        self.workspaces = rows
+        self.loading = False
+
+    def _on_error(self, msg: str) -> None:
+        self.error = msg
+        self.loading = False
 
     def _load(self) -> list[Workspace]:
         with Storage.open_readonly(self.state.global_db) as storage_:
@@ -87,6 +99,10 @@ class WorkspacesScreen:
         return "[enter] open  [s] sort  [/] filter  [↑/↓] move"
 
     def render(self) -> list[tuple[str, str]]:
+        if self.error:
+            return [("class:row", f"  Error: {self.error}\n")]
+        if self.loading:
+            return [("class:row", f"  {spinner_frame()} Loading…\n")]
         rows = self.visible
         if rows and self.cursor >= len(rows):
             self.cursor = len(rows) - 1

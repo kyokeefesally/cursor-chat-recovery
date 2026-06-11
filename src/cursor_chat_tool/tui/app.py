@@ -33,6 +33,7 @@ class AppState:
     global_db: Path
     workspace_storage: Path
     workspaces_config: Path | None
+    sync_load: bool = False
 
 
 @runtime_checkable
@@ -168,6 +169,7 @@ def _build_application(
         full_screen=True,
         input=inp,
         output=output,
+        refresh_interval=0.1,
     )
 
 
@@ -179,6 +181,7 @@ def run_tui(
     input: Any = None,  # noqa: A002
     output: Any = None,
     cursor_running_check: Callable[[], bool] | None = None,
+    sync_load: bool = False,
 ) -> int:
     global _active_nav
     if global_db is None or workspace_storage is None:
@@ -192,6 +195,7 @@ def run_tui(
         global_db=Path(global_db),
         workspace_storage=Path(workspace_storage),
         workspaces_config=Path(workspaces_config) if workspaces_config else None,
+        sync_load=sync_load,
     )
 
     # Imported here to avoid a circular import (screen modules import from app).
