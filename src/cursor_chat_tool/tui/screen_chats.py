@@ -50,6 +50,13 @@ class ChatsScreen:
         self.error = msg
         self.loading = False
 
+    def reload(self) -> None:
+        """Re-fetch rows (e.g. after chats were moved away from this workspace)."""
+        self.selected_ids = set()
+        self.loading = True
+        self.error = None
+        start_load(self.state.sync_load, self._load, self._on_loaded, self._on_error)
+
     # -- Screen protocol --------------------------------------------------
 
     def title(self) -> str:

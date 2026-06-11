@@ -23,6 +23,9 @@ _ROLE_STYLE = {
 class MessagesScreen:
     """Screen rendering the bubbles of a single chat conversation."""
 
+    # Chat text reads better soft-wrapped; the app body window honors this.
+    wrap_lines = True
+
     def __init__(
         self,
         state: AppState,

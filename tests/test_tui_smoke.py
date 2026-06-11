@@ -522,3 +522,32 @@ def test_export_path_is_editable(minimal_db, workspace_storage_dir):
         if tuple(b.keys) == (Keys.ControlM,):
             b.handler(None)  # type: ignore[arg-type]
     assert submitted == ["C:/exportsx"]
+
+
+def test_chats_reload_refreshes_rows_and_clears_selection(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool import operations, storage
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_chats import ChatsScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    with storage.Storage.open_readonly(minimal_db) as s:
+        ws = next(w for w in operations.list_workspaces(s, workspace_storage_dir)
+                  if w.identifier.id == "ws-alpha")
+    screen = ChatsScreen(state, ws)
+    screen.select_all()
+    assert screen.selected_ids
+    screen.reload()
+    assert screen.selected_ids == set()
+    assert screen.chats  # rows re-loaded (sync path outside an event loop)
+    assert screen.loading is False
+
+
+def test_messages_screen_wraps_lines(minimal_db, workspace_storage_dir):
+    """The body window wraps only on screens that opt in via wrap_lines."""
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_messages import MessagesScreen
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    assert MessagesScreen(state, "c-alpha-1").wrap_lines is True
+    assert getattr(WorkspacesScreen(state), "wrap_lines", False) is False

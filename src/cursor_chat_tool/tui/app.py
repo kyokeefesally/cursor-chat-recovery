@@ -115,8 +115,15 @@ def _build_application(
     breadcrumb_window = Window(
         content=FormattedTextControl(breadcrumb_text), height=1
     )
+    from prompt_toolkit.filters import Condition
+
     body = Window(
         content=FormattedTextControl(lambda: nav.current.render(), focusable=True),
+        # Screens opt into soft-wrapping (e.g. chat messages) via a
+        # ``wrap_lines = True`` attribute; tabular lists keep truncation.
+        wrap_lines=Condition(
+            lambda: bool(getattr(nav.current, "wrap_lines", False))
+        ),
     )
     footer = Window(
         content=FormattedTextControl(
@@ -125,8 +132,6 @@ def _build_application(
         height=1,
     )
     layout = Layout(HSplit([breadcrumb_window, body, footer]))
-
-    from prompt_toolkit.filters import Condition
 
     def _typing() -> bool:
         return bool(getattr(nav.current, "wants_text_input", lambda: False)())
@@ -278,6 +283,10 @@ def run_tui(
                 except storage.CursorRunning as e:
                     nav.push(dialogs.ResultScreen(state, [f"Move failed: {e}"]))
                     return
+                # Refresh the chats screen so the moved chats disappear from it.
+                reload = getattr(nav.current, "reload", None)
+                if reload is not None:
+                    reload()
                 nav.push(
                     dialogs.ResultScreen(
                         state,
