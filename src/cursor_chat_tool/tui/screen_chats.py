@@ -70,6 +70,8 @@ class ChatsScreen:
             count = c.bubble_count_hint or 0
             line = f"{marker}{mark} {date:<16}  {name:<{_NAME_WIDTH}}  {count:>4}"
             cls = "class:row-selected" if i == self.cursor else "class:row"
+            if i == self.cursor:
+                fragments.append(("[SetCursorPosition]", ""))
             fragments.append((cls, line + "\n"))
 
         return fragments
@@ -96,6 +98,22 @@ class ChatsScreen:
         def _(event: Any) -> None:
             if self.cursor < len(self.chats) - 1:
                 self.cursor += 1
+
+        @kb.add("pageup")
+        def _(event: Any) -> None:
+            self.cursor = max(0, self.cursor - 10)
+
+        @kb.add("pagedown")
+        def _(event: Any) -> None:
+            self.cursor = min(len(self.chats) - 1, self.cursor + 10)
+
+        @kb.add("home")
+        def _(event: Any) -> None:
+            self.cursor = 0
+
+        @kb.add("end")
+        def _(event: Any) -> None:
+            self.cursor = len(self.chats) - 1
 
         @kb.add("space")
         def _(event: Any) -> None:

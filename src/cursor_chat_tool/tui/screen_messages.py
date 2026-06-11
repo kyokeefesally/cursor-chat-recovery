@@ -35,6 +35,8 @@ class MessagesScreen:
         self.on_export = on_export
         with Storage.open_readonly(state.global_db) as s:
             self.chat: ChatDetail = operations.load_chat(s, composer_id)
+        self.scroll_line: int = 0
+        self._line_cache: list[tuple[str, str]] | None = None
 
     # -- Screen protocol --------------------------------------------------
 
@@ -46,29 +48,63 @@ class MessagesScreen:
         )
 
     def footer_hints(self) -> str:
-        return "[e] export  [esc] back"
+        return "[e] export  [↑/↓ pgup/pgdn] scroll  [esc] back"
 
-    def render(self) -> list[tuple[str, str]]:
+    def _lines(self) -> list[tuple[str, str]]:
+        if self._line_cache is not None:
+            return self._line_cache
         fragments: list[tuple[str, str]] = []
         if not self.chat.bubbles:
-            fragments.append(("class:row", "  (no messages)\n"))
-            return fragments
-
-        for bubble in self.chat.bubbles:
-            role = str(bubble.role)
-            style = _ROLE_STYLE.get(role, "class:role-unknown")
-            ts = bubble.created_at
-            when = ts.strftime("%Y-%m-%d %H:%M") if ts else ""
-            header = f"{role.upper()}  {when}".rstrip()
-            fragments.append((style, header + "\n"))
-            for line in bubble.text.splitlines() or [""]:
-                fragments.append(("class:row", "    " + line + "\n"))
-            fragments.append(("class:row", "\n"))
-
+            fragments = [("class:row", "  (no messages)\n")]
+        else:
+            for bubble in self.chat.bubbles:
+                role = str(bubble.role)
+                style = _ROLE_STYLE.get(role, "class:role-unknown")
+                ts = bubble.created_at
+                when = ts.strftime("%Y-%m-%d %H:%M") if ts else ""
+                fragments.append((style, f"{role.upper()}  {when}".rstrip() + "\n"))
+                for line in bubble.text.splitlines() or [""]:
+                    fragments.append(("class:row", "    " + line + "\n"))
+                fragments.append(("class:row", "\n"))
+        self._line_cache = fragments
         return fragments
+
+    def render(self) -> list[tuple[str, str]]:
+        lines = self._lines()
+        self.scroll_line = max(0, min(self.scroll_line, len(lines) - 1))
+        out: list[tuple[str, str]] = []
+        for i, frag in enumerate(lines):
+            if i == self.scroll_line:
+                out.append(("[SetCursorPosition]", ""))
+            out.append(frag)
+        return out
 
     def get_key_bindings(self) -> KeyBindings:
         kb = KeyBindings()
+
+        @kb.add("up")
+        def _(event: Any) -> None:
+            self.scroll_line = max(0, self.scroll_line - 1)
+
+        @kb.add("down")
+        def _(event: Any) -> None:
+            self.scroll_line = min(len(self._lines()) - 1, self.scroll_line + 1)
+
+        @kb.add("pageup")
+        def _(event: Any) -> None:
+            self.scroll_line = max(0, self.scroll_line - 20)
+
+        @kb.add("pagedown")
+        def _(event: Any) -> None:
+            self.scroll_line = min(len(self._lines()) - 1, self.scroll_line + 20)
+
+        @kb.add("home")
+        def _(event: Any) -> None:
+            self.scroll_line = 0
+
+        @kb.add("end")
+        def _(event: Any) -> None:
+            self.scroll_line = len(self._lines()) - 1
 
         @kb.add("e")
         def _(event: Any) -> None:

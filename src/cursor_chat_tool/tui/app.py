@@ -113,7 +113,9 @@ def _build_application(
     breadcrumb_window = Window(
         content=FormattedTextControl(breadcrumb_text), height=1
     )
-    body = Window(content=FormattedTextControl(lambda: nav.current.render()))
+    body = Window(
+        content=FormattedTextControl(lambda: nav.current.render(), focusable=True),
+    )
     footer = Window(
         content=FormattedTextControl(
             lambda: [("class:footer", f" {nav.current.footer_hints()}  [?] help  [q] quit ")]
@@ -135,6 +137,13 @@ def _build_application(
     @global_kb.add("escape", eager=True)
     def _(event: Any) -> None:
         nav.pop()
+
+    @global_kb.add("?")
+    def _(event: Any) -> None:
+        from cursor_chat_tool.tui import dialogs
+
+        if not isinstance(nav.current, dialogs.HelpScreen):
+            nav.push(dialogs.HelpScreen(state))
 
     key_bindings = merge_key_bindings([
         global_kb,

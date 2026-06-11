@@ -251,3 +251,52 @@ def test_tui_export_flow_no_crash(minimal_db, workspace_storage_dir, tmp_path, m
                              workspace_storage=workspace_storage_dir,
                              input=inp, output=DummyOutput())
     assert rc == 0
+
+
+def test_help_screen_lists_keys(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui import dialogs
+    from cursor_chat_tool.tui.app import AppState
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    help_screen = dialogs.HelpScreen(state)
+    text = "".join(t for _, t in help_screen.render())
+    for needle in ("move", "export", "space", "filter", "sort", "quit"):
+        assert needle in text.lower(), needle
+
+
+def test_question_mark_opens_help(minimal_db, workspace_storage_dir):
+    from prompt_toolkit.input import create_pipe_input
+    from prompt_toolkit.output import DummyOutput
+
+    from cursor_chat_tool.tui import app as tui_app
+    with create_pipe_input() as inp:
+        inp.send_text("?")
+        inp.send_text("\x1b")  # close help
+        inp.send_text("q")
+        rc = tui_app.run_tui(readonly=True, global_db=minimal_db,
+                             workspace_storage=workspace_storage_dir,
+                             input=inp, output=DummyOutput())
+    assert rc == 0
+
+
+def test_list_screens_emit_cursor_position(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_workspaces import WorkspacesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = WorkspacesScreen(state)
+    styles = [s for s, _ in screen.render()]
+    assert "[SetCursorPosition]" in styles
+
+
+def test_messages_screen_scroll_bindings(minimal_db, workspace_storage_dir):
+    from cursor_chat_tool.tui.app import AppState
+    from cursor_chat_tool.tui.screen_messages import MessagesScreen
+    state = AppState(readonly=True, global_db=minimal_db,
+                     workspace_storage=workspace_storage_dir, workspaces_config=None)
+    screen = MessagesScreen(state, "c-alpha-1")
+    keys = {tuple(b.keys) for b in screen.get_key_bindings().bindings}
+    for k in (("up",), ("down",), ("pageup",), ("pagedown",)):
+        assert k in keys, k
+    styles = [s for s, _ in screen.render()]
+    assert "[SetCursorPosition]" in styles

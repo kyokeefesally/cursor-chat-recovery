@@ -53,6 +53,8 @@ class PickTargetScreen:
             marker = "> " if i == self.cursor else "  "
             line = f"{marker}{w.display_name}  ({w.identifier.id})"
             cls = "class:row-selected" if i == self.cursor else "class:row"
+            if i == self.cursor:
+                fragments.append(("[SetCursorPosition]", ""))
             fragments.append((cls, line + "\n"))
         return fragments
 
@@ -68,6 +70,22 @@ class PickTargetScreen:
         def _(event: Any) -> None:
             if self.cursor < len(self.workspaces) - 1:
                 self.cursor += 1
+
+        @kb.add("pageup")
+        def _(event: Any) -> None:
+            self.cursor = max(0, self.cursor - 10)
+
+        @kb.add("pagedown")
+        def _(event: Any) -> None:
+            self.cursor = min(len(self.workspaces) - 1, self.cursor + 10)
+
+        @kb.add("home")
+        def _(event: Any) -> None:
+            self.cursor = 0
+
+        @kb.add("end")
+        def _(event: Any) -> None:
+            self.cursor = len(self.workspaces) - 1
 
         @kb.add("enter")
         def _(event: Any) -> None:
@@ -187,6 +205,53 @@ class ExportPathScreen:
             self.on_submit(self.default_dir)
 
         return kb
+
+
+_HELP_TEXT = """\
+Global
+  ?            open this help
+  q            quit
+  esc          back / cancel (clears an active filter first)
+  ctrl-c       force quit
+
+Workspaces (project list)
+  up/down      move selection      pgup/pgdn    page
+  enter        open workspace's chats
+  s            cycle sort (last activity / chat count / name / health)
+  /            filter by name or path (enter keeps it, esc clears)
+
+Chats (within a workspace)
+  up/down      move selection      pgup/pgdn    page
+  enter        view messages
+  space        select/deselect chat for bulk actions
+  m            move selected (or highlighted) chats to another workspace
+  e            export selected (or highlighted) chats to markdown files
+
+Messages (within a chat)
+  up/down, pgup/pgdn, home/end   scroll
+  e            export this chat
+
+Moving chats writes a timestamped backup first; Cursor must be closed.
+"""
+
+
+class HelpScreen:
+    """Static key-binding reference; Esc closes via the global binding."""
+
+    def __init__(self, state: AppState) -> None:
+        self.state = state
+
+    def title(self) -> str:
+        return "Help"
+
+    def render(self) -> list[tuple[str, str]]:
+        return [("class:row", _HELP_TEXT)]
+
+    def footer_hints(self) -> str:
+        return "[esc] close"
+
+    def get_key_bindings(self) -> KeyBindings:
+        return KeyBindings()
 
 
 class SchemaMismatchScreen:
