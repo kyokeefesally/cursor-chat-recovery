@@ -31,6 +31,58 @@ After `uv tool install`, ensure `~/.local/bin` is on your PATH (run `uv tool upd
 
 Close Cursor before any mutation. The tool refuses to write while Cursor is running.
 
+## Keys
+
+### Global
+
+| Key | Action |
+|-----|--------|
+| `?` | Open help screen |
+| `q` | Quit |
+| `esc` | Back / cancel (clears an active filter first) |
+| `ctrl-c` | Force quit |
+
+### Workspaces (project list)
+
+| Key | Action |
+|-----|--------|
+| `up` / `down` | Move selection |
+| `pgup` / `pgdn` | Page up / down |
+| `home` / `end` | Jump to first / last |
+| `enter` | Open workspace's chats |
+| `s` | Cycle sort order (last activity → chat count → name → health) |
+| `/` | Filter by name or path (`enter` keeps filter, `esc` clears) |
+
+### Chats (within a workspace)
+
+| Key | Action |
+|-----|--------|
+| `up` / `down` | Move selection |
+| `pgup` / `pgdn` | Page up / down |
+| `enter` | View messages |
+| `space` | Select / deselect chat for bulk actions |
+| `a` | Select all chats |
+| `A` | Deselect all chats |
+| `m` | Move selected (or highlighted) chats to another workspace (`r` is a legacy alias) |
+| `e` | Export selected (or highlighted) chats to Markdown files |
+
+### Messages (within a chat)
+
+| Key | Action |
+|-----|--------|
+| `up` / `down`, `pgup` / `pgdn`, `home` / `end` | Scroll |
+| `e` | Export this chat |
+
+### Moving chats
+
+Press `m` on the chats screen to open the move-target picker. Workspaces are
+identified by name, path, chat count, and last activity so ambiguous short
+names are distinguishable. Type `/` to filter the list; the current workspace
+is marked and cannot be selected as a target. After you confirm, a timestamped
+backup is written to `~/.cursor-chat-tool/backups/` before any data is
+touched. Cursor must be closed before the move is attempted; the tool refuses
+to write while Cursor is running.
+
 ## Safety
 
 - Per-session full DB backup written next to `state.vscdb` on first mutation.
