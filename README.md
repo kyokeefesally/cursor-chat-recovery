@@ -1,6 +1,7 @@
 # cursor-chat-recovery
 
 [![CI](https://github.com/kwiscion/cursor-chat-recovery/actions/workflows/ci.yml/badge.svg)](https://github.com/kwiscion/cursor-chat-recovery/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/cursor-chat-recovery.svg)](https://pypi.org/project/cursor-chat-recovery/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
@@ -16,15 +17,17 @@ It's also useful when nothing is broken: browse every chat you've ever had in an
 
 Requires Python 3.10+. With [uv](https://docs.astral.sh/uv/):
 
-    uv tool install git+https://github.com/kwiscion/cursor-chat-recovery
+    uv tool install cursor-chat-recovery
 
 or with pipx:
 
-    pipx install git+https://github.com/kwiscion/cursor-chat-recovery
+    pipx install cursor-chat-recovery
 
 Both install the `cursor-chat-recovery` executable (and a short alias, `ccr`).
 After `uv tool install`, ensure `~/.local/bin` is on your PATH (run `uv tool update-shell` once if needed).
 
+To install the latest development version instead:
+`uv tool install git+https://github.com/kwiscion/cursor-chat-recovery`.
 To run from a clone without installing: `uv run cursor-chat-recovery`.
 
 ## Use

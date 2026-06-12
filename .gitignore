@@ -11,3 +11,4 @@ build/
 # harness-local
 .claude/
 LAUNCH.md
+demo/
