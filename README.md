@@ -13,6 +13,8 @@ Cursor identifies each workspace by a hash of its identifier URI. Reopening a pr
 
 It's also useful when nothing is broken: browse every chat you've ever had in any project, move chats between workspaces, and export conversations to Markdown.
 
+![Demo: recovering orphaned chats](demo.gif)
+
 ## Install
 
 Requires Python 3.10+. With [uv](https://docs.astral.sh/uv/):
