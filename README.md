@@ -7,13 +7,13 @@
 
 Did your Cursor chats disappear after you moved, renamed, or re-opened a project? They're not gone. This is an interactive terminal UI to **recover, browse, move, and export Cursor AI chat history** — across all your projects.
 
+![Demo: recovering orphaned chats](demo.gif)
+
 ## Why chats "disappear"
 
 Cursor identifies each workspace by a hash of its identifier URI. Reopening a project from a different path, or saving an Untitled multi-folder workspace as a `.code-workspace` file, mints a new workspace identity and detaches all prior chats from the sidebar. The conversations are still in `globalStorage/state.vscdb` keyed by `composerId` — they just need their `workspaceIdentifier` rewritten to point at the new workspace. That's what this tool does, with backups at every step.
 
 It's also useful when nothing is broken: browse every chat you've ever had in any project, move chats between workspaces, and export conversations to Markdown.
-
-![Demo: recovering orphaned chats](demo.gif)
 
 ## Install
 
