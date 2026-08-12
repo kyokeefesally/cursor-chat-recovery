@@ -1,0 +1,21 @@
+# Real people's phone numbers and emails. Never commit.
+config/roster.json
+
+# Generated summaries and exports contain private message content.
+summaries/*
+!summaries/.gitkeep
+exports/
+*.transcript.md
+*.jsonl
+
+# Never let a copy of the Messages database into the repo.
+chat.db
+chat.db-wal
+chat.db-shm
+
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.DS_Store

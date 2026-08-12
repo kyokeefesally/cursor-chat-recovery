@@ -1,0 +1,31 @@
+{
+  "_comment": [
+    "Copy this file to config/roster.json and fill it in. roster.json is gitignored,",
+    "so real phone numbers never get committed.",
+    "",
+    "Names here take priority over the macOS Contacts lookup, which is useful when a",
+    "contact card says 'Ben Work Cell' but you want the summary to say 'Ben'.",
+    "",
+    "Handles can be written any way you like (+1 555-010-0001, 5550100001, ...) —",
+    "phone numbers are matched on their last 10 digits. Emails match exactly.",
+    "List every handle a person texts from; people move between numbers and Apple IDs."
+  ],
+
+  "me": "Kyle",
+
+  "people": [
+    {
+      "name": "Alex",
+      "handles": ["+15550100001"],
+      "note": "optional — free-form context that helps disambiguate, e.g. 'trip organizer'"
+    },
+    {
+      "name": "Ben",
+      "handles": ["+15550100002", "ben@example.com"]
+    },
+    {
+      "name": "Cara",
+      "handles": ["+15550100003"]
+    }
+  ]
+}

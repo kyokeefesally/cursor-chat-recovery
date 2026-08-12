@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 scripts/imessage_query.py:*)",
+      "Bash(python3 -m pytest:*)",
+      "Read(./config/**)",
+      "Read(./profiles/**)",
+      "Read(./scripts/**)",
+      "Read(./summaries/**)"
+    ]
+  }
+}
